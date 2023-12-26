@@ -1,0 +1,45 @@
+<body></body>
+<script>
+  // 存储副作用函数的桶
+  const bucket = new Set()
+  // 原始数据
+  const data = { text: 'Hello' }
+
+  // 存储被注册的副作用函数
+  let activeEffect
+  // effect 用于注册副作用函数
+  function effect(fn) {
+    activeEffect = fn
+    // 执行副作用函数
+    fn()
+  }
+  // 代理
+  const obj = new Proxy(data, {
+    // 拦截读取操作
+    get(target, prop, receiver) {
+      if (activeEffect) {
+        // 将副作用函数存储到桶中
+        bucket.add(activeEffect)
+      }
+      return Reflect.get(target, prop, receiver)
+    },
+    // 拦截设置操作
+    set(target, prop, value, receiver) {
+      const result = Reflect.set(target, prop, value, receiver)
+      // 执行副作用函数
+      bucket.forEach(fn => fn())
+      return result
+    }
+  })
+
+  effect(
+    // 一个匿名的副作用函数
+    () => {
+    document.body.innerText = obj.text
+  })
+
+  setTimeout(() => {
+    // 2 秒后修改响应式数据
+    obj.text = 'Hello Vue3!'
+  }, 2000)
+</script>

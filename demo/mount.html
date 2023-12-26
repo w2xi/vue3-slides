@@ -1,0 +1,68 @@
+<style>
+.red {
+    color: red;
+}
+</style>
+<body></body>
+<script>
+function h(tag, props, children) {
+    return {
+        tag,
+        props,
+        children,
+    }
+}
+
+function render() {
+    return h('ul', {
+        class: 'red',
+        onClick() {
+            console.log('click')
+        }
+    }, [ h('li', null, 'Vue'), h('li', null, 'React'), h('li', null, 'Angular') ])
+}
+
+function mount(vnode, container) {
+    const el = document.createElement(vnode.tag)
+
+    if (vnode.props) {
+        for (let key in vnode.props) {
+            if (key.startsWith('on')) { // 事件绑定
+                const eventName = key.slice(2).toLowerCase()
+                el.addEventListener(eventName, vnode.props[key])
+            } else {
+                el.setAttribute(key, vnode.props[key])
+            }
+        }
+    }
+    if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
+            mount(child, el)
+        })
+    } else { // string
+        el.textContent = vnode.children
+    }
+
+    container.appendChild(el)
+}
+
+const vnode = render()
+console.log(vnode);
+mount(vnode, document.body)
+
+// vnode
+// {
+//     tag: 'ul',
+//     props: {
+//         class: 'red',
+//         onClick() {
+//             console.log('click')
+//         }
+//     },
+//     children: [
+//         { tag: 'li', children: 'Vue' },
+//         { tag: 'li', children: 'React' },
+//         { tag: 'li', children: 'Angular' },
+//     ]
+// }
+</script>

@@ -1,0 +1,34 @@
+<body></body>
+<script>
+  // 存储副作用函数的桶
+  const bucket = new Set()
+  // 原始数据
+  const data = { text: 'Hello' }
+  // 代理
+  const obj = new Proxy(data, {
+    // 拦截读取操作
+    get(target, prop, receiver) {
+      // 将副作用函数存储到桶中
+      bucket.add(effect)
+      return Reflect.get(target, prop, receiver)
+    },
+    // 拦截设置操作
+    set(target, prop, value, receiver) {
+      const result = Reflect.set(target, prop, value, receiver)
+      // 执行副作用函数
+      bucket.forEach(fn => fn())
+      return result
+    }
+  })
+
+  function effect() {
+    document.body.innerText = obj.text
+  }
+  // 执行副作用函数，触发读取操作
+  effect()
+
+  setTimeout(() => {
+    // 2 秒后修改响应式数据
+    obj.text = 'Hello Vue3!'
+  }, 2000)
+</script>
