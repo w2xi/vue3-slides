@@ -147,7 +147,126 @@ obj.text = 'Hello Vue3!'
 ---
 ---
 
-假设有一个`桶`，当我们读取
+假设有一个`桶`，当读取 `obj.text` 时，把副作用函数 `effect` 放入 `桶` 中；当修改 `obj.text` 时，把 `effect` 从 `桶` 中取出执行
+
+```js {all|2|5|all}
+function effect() {
+  document.body.innerText = obj.text // 读取操作
+}
+effect() 
+obj.text = 'Hello Vue3!' // 赋值操作
+```
+
+<arrow v-click="[1, 2]" x1="330" y1="170" x2="630" y2="280" color="#564" width="3" arrowSize="1" />
+<img v-click="[1, 2]" alt="桶占位" />
+<img v-click="[2, 3]" alt="桶占位" />
+
+---
+---
+
+这就需要我们在拦截器中做处理，现在代码变成这样:
+
+```js {all|6|10|all}
+// demo: 01-how-to-build-reactivity-data.html
+const bucket = new Set()
+const data = { text: 'Hello' } 
+const obj = new Proxy(data, {
+  get(target, prop, receiver) {
+    bucket.add(effect)
+    return Reflect.get(target, prop, receiver)
+  },
+  set(target, prop, value, receiver) {
+    bucket.forEach(fn => fn())
+    return Reflect.set(target, prop, value, receiver)
+  }
+})
+function effect() {
+  document.body.innerText = obj.text
+}
+effect()
+obj.text = 'Hello Vue3!'
+```
+
+---
+---
+
+但是，现在还有一些问题，比如: 副作用函数 `effect` 的名称是硬编码的，一旦修改就会导致代码不能正常工作，现在我们来修复这一点。
+
+<div grid="~ cols-2 gap-2" m="t-2">
+
+```js {1-8,11-14}
+// 储存被注册的副作用函数
+let activeEffect
+// 用来注册副作用函数
+function effect(fn) {
+  activeEffect = fn
+  // 执行副作用函数
+  fn()
+}
+const obj = new Proxy(data, {
+  get(target, prop, receiver) {
+    if (activeEffect) {
+      // 将副作用函数存储到桶中
+      bucket.add(activeEffect)
+    }
+    // 省略其他代码
+  },
+  // 省略其他代码
+})
+```
+
+```js {0|all}
+// 测试一下效果:
+// demo: 02-how-to-design-reactivity-system.html
+effect(() => {
+  document.body.innerText = obj.text
+})
+setTimeout(() => {
+  // 2 秒后修改响应式数据
+  obj.text = 'Hello Vue3!'
+}, 2000)
+```
+
+</div>
+
+---
+---
+
+解决了硬编码副作用函数名称问题，但是再稍微测试，比如给 `obj` 对象设置一个不存在的属性:
+
+```js
+// demo: 03-how-to-design-reactivity-system2.html
+effect(() => {
+  document.body.innerText = obj.text
+  console.log('call effect fn') // 打印了两次
+})
+setTimeout(() => {
+  obj.noExist = '测试不存在的属性'
+}, 1000)
+```
+
+显然，结果并不是我们期望的。
+
+稍微分析一下: 第一次执行副作用函数时，读取 `obj.text`，同时将副作用函数储存到桶中，1秒后设置 `obj.noExist` 的值，会重新执行副作用函数，从而导致了打印两次。
+
+思考一下: 我们期望的应该是建立 `obj.text` 到副作用函数的关联，即只有修改 `obj.text` 时才应该再次执行副作用函数。
+
+大致思路是：读取 `obj.text`时，建立 `obj.text` 和 副作用函数的关联；设置 `obj.text`时，取出关联的副作用函数执行
+
+---
+---
+
+## WeakMap & Map & Set
+
+```ts
+WeakMap<target, Map<key, Set<effectFn>>>
+```
+
+<img 
+  src="public/1.excalidraw.png" 
+  style="margin-top: 50px"
+  alt="the-structure-of-reactivity-data-and-effect-fn"
+/>
 
 ---
 layout: image-right
