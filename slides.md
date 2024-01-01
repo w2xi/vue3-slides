@@ -633,8 +633,177 @@ console.log('结束了')
 '结束了'
 2
 ```
-
 demo: 07-schedular.html
+
+---
+
+## 计算属性 computed 与 lazy
+
+有了前面介绍的内容，接下来我们可以来实现一下计算属性了。
+
+计算属性的特性:
+- 惰性求值。只有访问计算属性的值时才会执行计算
+- 缓存。第一次求值后会缓存结果，依赖未变更时，会从缓存中拿到数据；变更时会导致重新计算。
+
+
+首先，既然计算属性是懒执行的，那么传递给 `effect` 的副作用函数不应该立即执行，它的执行时机应该由我们来决定。
+
+<div grid="~ cols-2 gap-4">
+
+```js
+effect(
+  // 指定 lazy 选项，副作用函数不会立即执行
+  () => {
+    console.log(obj.foo)
+  }, 
+  { 
+    lazy: true 
+  }
+)
+```
+
+```js
+function effect(fn, options = {}) {
+  fn.options = options
+  activeEffect = fn
+  effectStack.push(fn)
+  if (!options.lazy) { // 只有非 lazy 的时候，才执行
+    fn()
+  }
+  effectStack.pop()
+  activeEffect = effectStack[effectStack.length - 1]
+  return fn // 返回副作用函数
+}
+```
+</div>
+---
+
+现在通过指定 lazy 选项，我们已经可以自由的选择执行副作用函数的时机，那副作用函数具体应该什么时候执行呢?
+
+<div grid="~ cols-2 gap-4">
+
+```js
+const effectFn = effect(
+  // getter
+  () => obj.a + obj.b, 
+  { lazy: true }
+)
+// getter 的返回值
+const value = effectFn()
+```
+
+```js
+function computed(getter) {
+  // 缓存上一次计算的值
+  let value
+  let dirty = true // 是否是脏数据的标记
+  const effectFn = effect(getter, {
+      // 懒执行
+      lazy: true,
+      schedular(fn) { // 依赖变更
+        dirty = true
+      }
+    })
+  const obj = { // 访问器属性
+    get value() {
+      if (dirty) {
+        dirty = false
+        value = effectFn()
+      }
+      return value
+    }
+  }
+  return obj
+}
+```
+
+</div>
+
+---
+
+测试一下代码:
+
+demo: 08-computed.html
+
+```js
+const data = { a: 1, b: 2 }
+const obj = reactive(data)
+const result = computed(() => obj.a + obj.b)
+console.log(result) // 3
+```
+
+可以看到，结果和我们预期的一样。
+
+但是，当我们在另一个 effect 中使用计算属性时，它似乎还有点bug:
+
+```js
+const result = computed(() => obj.a + obj.b)
+
+effect(() => {
+  // 在副作用函数中读取计算属性
+  console.log(result.value)
+})
+
+obj.a++
+```
+修改`obj.a`的值，副作用函数并没有重新执行。
+
+--- 
+
+实际上这是发生了 effect 嵌套。内层的 effect，即计算属性 computed，无法影响到外层的 effect。
+
+怎么解决呢 ？我们可以手动将计算计算属性和副作用函数建立关联。
+
+```js
+function computed(getter) {
+  let value
+  let dirty = true
+  const effectFn = effect(getter, {
+    lazy: true,
+    schedular(fn) {
+      if (!dirty) {
+        dirty = true
+        trigger(obj, 'value') // 依赖变更时，手动触发
+      }
+    }
+  })
+  const obj = { // 访问器属性
+    get value() {
+      if (dirty) {
+        dirty = false
+        value = effectFn()
+      }
+      track(obj, 'value') // 读取 value 属性时，手动追踪
+      return value
+    }
+  }
+}
+```
+
+---
+
+测试一下代码:
+
+```js
+const data = { a: 1, b: 2 }
+const obj = reactive(data)
+const result = computed(function effectFn() {
+  return obj.a + obj.b
+})
+effect(() => {
+  // 在副作用函数中读取计算属性
+  console.log(result.value)
+})
+obj.a++ // 修改 obj.a 的值，副作用函数会重新执行
+
+// 建立的关联:
+`
+computed(obj)
+  └── value
+      └── effectFn
+`
+```
+demo: 09-computed-2.html
 
 ---
 layout: image-right

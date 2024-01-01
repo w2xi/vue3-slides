@@ -1,0 +1,88 @@
+<body></body>
+
+<script>
+let activeEffect
+const effectStack = []
+function effect(fn, options = {}) {
+  fn.options = options
+  activeEffect = fn
+  effectStack.push(fn)
+  if (!options.lazy) { // 只有非 lazy 的时候，才执行
+    fn()
+  }
+  effectStack.pop()
+  activeEffect = effectStack[effectStack.length - 1]
+  return fn // 返回副作用函数
+}
+
+const bucket = new WeakMap()
+
+function reactive(data) {
+  return new Proxy(data, {
+    get(target, prop, receiver) {
+      track(target, prop)
+      return Reflect.get(target, prop, receiver)
+    },
+    set(target, prop, newVal, receiver) {
+      const result = Reflect.set(target, prop, newVal, receiver)
+      trigger(target, prop)
+      return result
+    }
+  })
+}
+
+function track(target, prop) {
+  if (!activeEffect) return
+  let depsMap = bucket.get(target)
+  if (!depsMap) {
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let deps = depsMap.get(prop)
+  if (!deps) {
+    depsMap.set(prop, (deps = new Set()))
+  }
+  deps.add(activeEffect) // 收集副作用函数
+}
+function trigger(target, prop) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  const effects = depsMap.get(prop)
+  effects && effects.forEach(effectFn => {
+    if (effectFn.options.schedular) {
+      // 如果存在调度器
+      effectFn.options.schedular(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+function computed(getter) {
+  // 缓存上一次计算的值
+  let value
+  let dirty = true // 是否是脏数据的标记
+  const effectFn = effect(getter, {
+      // 懒执行
+      lazy: true,
+      schedular(fn) { // 依赖变更
+        dirty = true
+      }
+    })
+  const obj = { // 访问器属性
+    get value() {
+      if (dirty) {
+        dirty = false
+        value = effectFn()
+      }
+      return value
+    }
+  }
+  return obj
+}
+
+const data = { a: 1, b: 2 }
+const obj = reactive(data)
+const result = computed(() => obj.a + obj.b)
+
+console.log(result.value) // 3
+</script>
