@@ -401,9 +401,9 @@ function reactive(data) {
   })
 }
 // 追踪依赖
-function track(target, prop) {/** */}
+function track(target, prop) {/* ... */}
 // 触发依赖
-function trigger(target, prop) {/** */}
+function trigger(target, prop) {/* ... */}
 ```
 
 `demo: 04-design-a-full-reactivity-system.html`
@@ -411,13 +411,230 @@ function trigger(target, prop) {/** */}
 ---
 ---
 
-分支切换与 cleanup
-
----
----
-
 ## 嵌套的 effect 和 effect 栈
 
+effect 是可以发生嵌套的，比如:
+
+```js
+effect(function effectFn1() {
+  effect(function effectFn2() {/* ... */})
+  /* ... */
+})
+```
+
+上面这段代码中，effectFn1 嵌套了 effectFn2，effectFn1 的执行会导致 effectFn2 的执行。那么在真实的 Vue.js 场景中，什么时候会出现这种情况呢？
+
+实际上，渲染函数就是 effect 中执行的：
+```js
+const ComponentA = {
+  render() {/* ... */}
+}
+effect(() => {
+  // 在effect中执行组件A的渲染函数
+  ComponentA.render()
+})
+```
+
+---
+
+当组件发生嵌套时：
+
+```js
+const ComponentB = {
+  render() {
+    return <ComponentA /> // jsx 写法
+  }
+}
+// 相当于
+effect(() => {
+  ComponentB.render()
+  effect(() => {
+    ComponentA.render()
+  })
+})
+```
+但是，我们目前的代码是不支持effect嵌套的，用下面的代码测试一下:
+```js
+const data = {a: 1, b: 2}
+effect(function effectFn1() {
+  console.log('effectFn1 被执行')
+  effect(function effectFn2() {
+    console.log('effectFn2 被执行')
+    obj.a
+  })
+  obj.b
+})
+```
+
+---
+
+我们期望副作用函数和对象属性建立的联系如下:
+
+```js
+data
+  └── a
+      └── effectFn1
+  └── b
+      └── effectFn2
+```
+
+但是，当我们修改 `obj.b` 的值时:
+```js
+// demo: 05-nested-effect.html
+obj.b = 20
+```
+
+发现输出如下：
+
+```js
+effectFn1 被执行
+effectFn2 被执行
+effectFn2 被执行
+```
+
+显然，这是不符合预期的，修改 `obj.b` 的值并没有执行 effectFn1，而实执行了 effectFn2
+
+---
+
+```js
+// 储存被激活的副作用函数
+let activeEffect
+function effect(fn) {
+  activeEffect = fn
+  fn()
+}
+effect(function effectFn1() {
+  console.log('effectFn1 被执行')
+  effect(function effectFn2() {
+    console.log('effectFn2 被执行')
+    obj.a
+  })
+  obj.b
+})
+```
+
+分析以上代码可知，当发生 effect 嵌套时，**内层副作用函数 effectFn2 的执行会覆盖掉 activeEffect 的值**，并且永远不会恢复到原来的值，这就是问题产生的元因。
+
+那么，应该如何解决这个问题吗 ？
+
+---
+
+我们可以引入一个副作用函数栈 `effectStack`，让当前激活的副作用函数始终指向栈顶，即执行副作用函数时，将副作用函数压根栈中，执行完毕从栈中弹出。
+
+```js
+let activeEffect
+const effectStack = []
+
+function effect(fn) {
+  activeEffect = fn
+  effectStack.push(fn)
+  fn()
+  effectStack.pop()
+  // 指向栈顶
+  activeEffect = effectStack[effectStack.length - 1]
+}
+```
+demo: 06-nested-effect.html
+
+---
+
+## 调度执行
+
+可调度性是响应系统非常重要的特性。首先我们需要明确什么是
+可调度性。所谓可调度，指的是当 trigger 动作触发副作用函数重新
+执行时，有能力决定副作用函数执行的方式等。
+
+先看以下代码:
+
+```js
+const data = { foo: 1 }
+const obj = reactive(data)
+effect(() => {
+  console.log(obj.foo)
+})
+obj.foo++
+console.log('结束了')
+
+// 输出如下:
+1
+2
+结束了
+```
+现在假设我们期望输出的顺序如下:
+```js
+1
+2
+'结束了'
+```
+
+---
+
+在不调整代码顺序的情况下，如何才能得到我们期望的结果呢？这时就需要响应式系统支持 **调度**。
+
+我们可以为 effect 函数设计一个选项参数 options，允许用户指定调度器：
+
+```js
+effect(() => {
+  console.log(obj.foo)
+}, {
+  // 调度器函数，参数 fn 是副作用函数
+  schedular(fn) {
+    // ...
+  }
+})
+```
+
+调整代码，将 options 挂到副作用函数上，在 trigger 函数中将副作用函数传给调度器函数:
+
+<div grid="~ cols-2 gap-2" m="t-2">
+
+```js {2}
+function effect(fn, options = {}) {
+  fn.options = options
+  activeEffect = fn
+  effectStack.push(fn)
+  fn()
+  effectStack.pop()
+  activeEffect = effectStack[effectStack.length - 1]
+}
+```
+
+```js {2-9}
+function trigger(target, prop) {
+  effects.forEach(effectFn => {
+    if (effectFn.options.schedular) {
+      effectFn.options.schedular(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+```
+
+</div>
+
+---
+
+```js
+const data = { foo: 1 }
+const obj = reactive(data)
+effect(() => {
+  console.log(obj.foo)
+}, {
+  schedular(fn) {
+    setTimeout(fn)
+  }
+})
+obj.foo++
+console.log('结束了')
+
+// 输出如下:
+1
+'结束了'
+2
+```
+
+demo: 07-schedular.html
 
 ---
 layout: image-right

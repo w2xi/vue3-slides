@@ -3,10 +3,15 @@
 <script>
 // 当前注册（激活）的副作用函数
 let activeEffect
+const effectStack = []
 // 用来注册副作用函数
-function effect(fn) {
+function effect(fn, options = {}) {
+  fn.options = options
   activeEffect = fn
+  effectStack.push(fn)
   fn()
+  effectStack.pop()
+  activeEffect = effectStack[effectStack.length - 1]
 }
 
 const bucket = new WeakMap()
@@ -20,7 +25,7 @@ function reactive(data) {
     set(target, prop, newVal, receiver) {
       const result = Reflect.set(target, prop, newVal, receiver)
       trigger(target, prop)
-      return result // 这里一定要加上返回值 且为 truthy 的值 不然 nodejs 会报错 坑！！！
+      return result
     }
   })
 }
@@ -41,27 +46,25 @@ function trigger(target, prop) {
   const depsMap = bucket.get(target)
   if (!depsMap) return
   const effects = depsMap.get(prop)
-  // 触发依赖更新
-  effects && effects.forEach(fn => fn())
+  effects && effects.forEach(effectFn => {
+    if (effectFn.options.schedular) {
+      // 如果存在调度器
+      effectFn.options.schedular(effectFn)
+    } else {
+      effectFn()
+    }
+  })
 }
 
-const data = {
-  text: 'Hello Vue3',
-}
-
+const data = { foo: 1 }
 const obj = reactive(data)
-
 effect(() => {
-  document.body.innerText = obj.text
-  console.log('call effect fn') // 打印一次
+  console.log(obj.foo)
+}, {
+  schedular(fn) {
+    setTimeout(fn)
+  }
 })
-
-setTimeout(() => {
-  // 设置不存在的属性
-  obj.noExist = 'test'
-}, 1000)
-
-// setTimeout(() => {
-//   obj.text = 'test'
-// }, 1000)
+obj.foo++
+console.log('结束了')
 </script>

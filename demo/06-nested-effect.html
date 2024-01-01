@@ -3,10 +3,14 @@
 <script>
 // 当前注册（激活）的副作用函数
 let activeEffect
+const effectStack = []
 // 用来注册副作用函数
 function effect(fn) {
   activeEffect = fn
+  effectStack.push(fn)
   fn()
+  effectStack.pop()
+  activeEffect = effectStack[effectStack.length - 1]
 }
 
 const bucket = new WeakMap()
@@ -45,23 +49,17 @@ function trigger(target, prop) {
   effects && effects.forEach(fn => fn())
 }
 
-const data = {
-  text: 'Hello Vue3',
-}
-
+const data = { a: 1, b: 2 }
 const obj = reactive(data)
 
-effect(() => {
-  document.body.innerText = obj.text
-  console.log('call effect fn') // 打印一次
+effect(function effectFn1() {
+  console.log('effectFn1 被执行')
+  effect(function effectFn2() {
+    console.log('effectFn2 被执行')
+    obj.a
+  })
+  obj.b
 })
 
-setTimeout(() => {
-  // 设置不存在的属性
-  obj.noExist = 'test'
-}, 1000)
-
-// setTimeout(() => {
-//   obj.text = 'test'
-// }, 1000)
+obj.b = 20
 </script>
