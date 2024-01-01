@@ -36,11 +36,11 @@
     // 一个匿名的副作用函数
     () => {
     document.body.innerText = obj.text
-    console.log('call effect fn');
+    console.log('call effect fn') // 打印两次
   })
 
   setTimeout(() => {
-    // 在副作用中并没有读取该属性
+    // 设置一个不存在的属性
     obj.noExist = 'test'
   }, 1000)
 </script>

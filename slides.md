@@ -166,7 +166,7 @@ obj.text = 'Hello Vue3!' // 赋值操作
 
 这就需要我们在拦截器中做处理，现在代码变成这样:
 
-```js {all|6|10|all}
+```js {all|6|11|all}
 // demo: 01-how-to-build-reactivity-data.html
 const bucket = new Set()
 const data = { text: 'Hello' } 
@@ -176,8 +176,9 @@ const obj = new Proxy(data, {
     return Reflect.get(target, prop, receiver)
   },
   set(target, prop, value, receiver) {
+    const result = Reflect.set(target, prop, value, receiver)
     bucket.forEach(fn => fn())
-    return Reflect.set(target, prop, value, receiver)
+    return result
   }
 })
 function effect() {
@@ -245,28 +246,178 @@ setTimeout(() => {
 }, 1000)
 ```
 
-显然，结果并不是我们期望的。
+可以看到，第一次执行副作用函数时，读取 `obj.text`，同时将副作用函数储存到桶中，1秒后设置 `obj.noExist` 的值，会重新执行副作用函数，从而导致了打印两次。
 
-稍微分析一下: 第一次执行副作用函数时，读取 `obj.text`，同时将副作用函数储存到桶中，1秒后设置 `obj.noExist` 的值，会重新执行副作用函数，从而导致了打印两次。
-
-思考一下: 我们期望的应该是建立 `obj.text` 到副作用函数的关联，即只有修改 `obj.text` 时才应该再次执行副作用函数。
-
-大致思路是：读取 `obj.text`时，建立 `obj.text` 和 副作用函数的关联；设置 `obj.text`时，取出关联的副作用函数执行
+显然，结果并不是我们期望的，产生该问题的根本原因是：我们**没有在副作用函数与被操作的目标字段之间建立明确的关联**。
 
 ---
 ---
 
-## WeakMap & Map & Set
+观察下面一段代码：
+
+```js
+// 注册副作用函数
+effect(function effectFn() {
+  document.body.innerText = obj.text // 读取 obj.text
+})
+```
+
+这段代码中存在三个角色：
+
+- 代理对象 obj
+- 字段名 text
+- 副作用函数 effectFn
+
+如果用 target 表示代理对象的原始对象，key 表示被操作的字段名，effectFn 表示被注册的副作用函数，那么可以建立如下联系：
+
+```
+target
+    └── key
+        └── effectFn
+```
+
+---
+
+<div grid="~ cols-2 gap-2" m="t-2">
+
+```js
+// 如果有两个副作用函数同时读取同一个对象的属性值:
+effect(function effectFn1() {
+  obj.text
+})
+effect(function effectFn2() {
+  obj.text
+})
+// 关系如下:
+`
+target
+    └── text
+        └── effectFn1
+        └── effectFn2
+`
+```
+
+```js
+// 如果一个副作用函数中读取了读取了同一个对象的两个不同属性
+effect(function effectFn1() {
+  obj.text1
+  obj.text2
+})
+// 关系如下:
+`
+target
+    └── text1
+        └── effectFn1
+    └── text2
+        └── effectFn1
+`
+```
+
+```js
+// 如果在不同的副作用函数中读取了两个不同对象的不同属性
+effect(function effectFn1() {
+  obj1.text1
+})
+effect(function effectFn2() {
+  obj2.text2
+})
+```
+
+```js
+// 关系如下:
+`
+target1
+    └── text1
+        └── effectFn1
+target2
+    └── text2
+        └── effectFn2
+`
+```
+</div>
+
+---
+---
+
+代码实现：
+
+```js
+const bucket = new WeakMap()
+const obj = new Proxy(data, {
+  get(target, prop, receiver) {
+    if (!activeEffect) return Reflect.get(target, prop, receiver)
+    let depsMap = bucket.get(target)
+    if (!depsMap) {
+      bucket.set(target, (depsMap = new Map()))
+    }
+    let deps = depsMap.get(prop)
+    if (!deps) {
+      depsMap.set(prop, (deps = new Set()))
+    }
+    deps.add(activeEffect) // 将副作用函数添加到桶中
+    return Reflect.get(target, prop, receiver)
+  },
+  set(target, prop, value, receiver) {
+    const result = Reflect.set(target, prop, value, receiver)
+    const depsMap = bucket.get(target)
+    if (!depsMap) return
+    const effects = depsMap.get(prop) // 获取 prop 对应的副作用函数
+    effects && effects.forEach(fn => fn()) // 执行副作用函数
+    return result
+  }
+})
+```
+
+---
+
+前面的代码中我们使用了 `WeakMap Map Set` 来构建数据结构，如下所示：
 
 ```ts
 WeakMap<target, Map<key, Set<effectFn>>>
 ```
 
 <img 
-  src="public/1.excalidraw.png" 
-  style="margin-top: 50px"
+  src="public/1.excalidraw.png"
   alt="the-structure-of-reactivity-data-and-effect-fn"
 />
+
+---
+
+最后，再将代码封装一下：
+```js
+const obj = reactive(data)
+
+function reactive(data) {
+  return new Proxy(data, {
+    get(target, prop, receiver) {
+      track(target, prop)
+      return Reflect.get(target, prop, receiver)
+    },
+    set(target, prop, newVal, receiver) {
+      const result = Reflect.set(target, prop, newVal, receiver)
+      trigger(target, prop)
+      return result
+    }
+  })
+}
+// 追踪依赖
+function track(target, prop) {/** */}
+// 触发依赖
+function trigger(target, prop) {/** */}
+```
+
+`demo: 04-design-a-full-reactivity-system.html`
+
+---
+---
+
+分支切换与 cleanup
+
+---
+---
+
+## 嵌套的 effect 和 effect 栈
+
 
 ---
 layout: image-right

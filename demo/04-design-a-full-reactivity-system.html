@@ -1,0 +1,63 @@
+<body></body>
+
+<script>
+// 当前注册（激活）的副作用函数
+let activeEffect
+// 用来注册副作用函数
+function effect(fn) {
+  activeEffect = fn
+  fn()
+}
+
+const bucket = new WeakMap()
+
+function reactive(val) {
+  return new Proxy(val, {
+    get(target, prop, receiver) {
+      track(target, prop)
+      return Reflect.get(target, prop, receiver)
+    },
+    set(target, prop, newVal, receiver) {
+      const result = Reflect.set(target, prop, newVal, receiver)
+      trigger(target, prop)
+      return result // 这里一定要加上返回值 且为 truthy 的值 不然 nodejs 会报错 坑！！！
+    }
+  })
+}
+
+function track(target, prop) {
+  if (!activeEffect) return
+  let depsMap = bucket.get(target)
+  if (!depsMap) {
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let deps = depsMap.get(prop)
+  if (!deps) {
+    depsMap.set(prop, (deps = new Set()))
+  }
+  deps.add(activeEffect) // 收集副作用函数
+}
+function trigger(target, prop) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  const effects = depsMap.get(prop)
+  // 触发依赖更新
+  effects && effects.forEach(fn => fn())
+}
+
+const data = {
+  text: 'Hello Vue3',
+}
+
+const obj = reactive(data)
+
+effect(() => {
+  document.body.innerText = obj.text
+  console.log('call effect fn') // 打印一次
+})
+
+setTimeout(() => {
+  // 设置不存在的属性
+  obj.noExist = 'test'
+}, 1000)
+</script>
