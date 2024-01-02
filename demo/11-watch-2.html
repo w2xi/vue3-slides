@@ -1,0 +1,117 @@
+<body></body>
+
+<script>
+let activeEffect
+const effectStack = []
+function effect(fn, options = {}) {
+  const effectFn = () => {
+    activeEffect = effectFn
+    effectStack.push(effectFn)
+    const result = fn()
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
+    return result
+  }
+  effectFn.options = options
+  if (!options.lazy) { // 只有非 lazy 的时候，才执行
+    effectFn()
+  }
+  return effectFn // 返回副作用函数
+}
+
+const bucket = new WeakMap()
+
+function reactive(data) {
+  return new Proxy(data, {
+    get(target, prop, receiver) {
+      track(target, prop)
+      const result = Reflect.get(target, prop, receiver)
+      // if (isObject(result)) {
+      //   return reactive(result)
+      // }
+      return result
+    },
+    set(target, prop, newVal, receiver) {
+      const result = Reflect.set(target, prop, newVal, receiver)
+      trigger(target, prop)
+      return result
+    }
+  })
+}
+
+function track(target, prop) {
+  if (!activeEffect) return
+  let depsMap = bucket.get(target)
+  if (!depsMap) {
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let deps = depsMap.get(prop)
+  if (!deps) {
+    depsMap.set(prop, (deps = new Set()))
+  }
+  deps.add(activeEffect) // 收集副作用函数
+}
+function trigger(target, prop) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  const effects = depsMap.get(prop)
+  effects && effects.forEach(effectFn => {
+    if (effectFn.options.schedular) {
+      // 如果存在调度器
+      effectFn.options.schedular(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+function isObject(val) {
+  return obj && typeof val === 'object'
+}
+
+// 遍历
+function traverse(obj, seen = new Set()) {
+  if (!isObject(obj)) return
+  // 避免循环引用
+  if (seen.has(obj)) return
+  seen.add(obj)
+  for (let key in obj) {
+    if (isObject(obj[key])) {
+      traverse(obj[key])
+    } else {
+      obj[key]
+    }
+  }
+  return obj
+}
+
+function watch(source, cb) {
+  let getter
+  if (typeof source === 'function') {
+    getter = source
+  } else {
+    getter = () => traverse(source)
+  }
+  let oldVal, newVal
+
+  const effectFn = effect(getter, {
+    lazy: true,
+    schedular() {
+      newVal = effectFn()
+      cb(newVal, oldVal)
+      // 更新旧值
+      oldVal = newVal
+    }
+  })
+  oldVal = effectFn()
+}
+
+const data = { a: 1 }
+const obj = reactive(data)
+
+watch(() => obj.a, (newVal, oldVal) => {
+  console.log(newVal, oldVal) // 100 1
+})
+
+obj.a = 100 // 修改 obj.a
+</script>

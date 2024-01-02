@@ -806,6 +806,68 @@ computed(obj)
 demo: 09-computed-2.html
 
 ---
+
+## watch 的实现原理
+
+和 computed 计算属性类似，在有了 effect 和 schedular 调度的基础后，就可以实现 watch 了。
+
+`watch`，实际上就是观测一个响应式数据的变化，然后执行相应的回调函数。
+
+第一版：
+
+```js
+// demo: 10-watch.html
+function watch(source, cb) {
+  let getter
+  if (typeof source === 'function') {
+    getter = source
+  }
+  effect(getter, {
+    schedular() {
+      cb()
+    }
+  })
+}
+watch(() => obj.a, () => {
+  console.log('回调被执行')
+})
+obj.a = 100 // 修改
+```
+
+---
+
+可以看到利用 `schedular` 调度的特性很容易实现 `watch`, 但是目前还有一些问题：
+- 只支持 getter (应该还要支持响应式数据对象)
+- 执行回调时没有传入新旧值
+
+<div grid="~ cols-2 gap-4">
+
+第二版: (demo: 11-watch-2.html)
+
+```js
+function watch(source, cb) {
+  let getter
+  if (typeof source === 'function') {
+    getter = source
+  } else {
+    getter = () => traverse(source)
+  }
+  let oldVal, newVal
+  const effectFn = effect(getter, {
+    lazy: true,
+    schedular() {
+      newVal = effectFn()
+      cb(newVal, oldVal)
+      // 更新旧值
+      oldVal = newVal
+    }
+  })
+  oldVal = effectFn()
+}
+```
+</div>
+
+---
 layout: image-right
 image: https://source.unsplash.com/collection/94734566/1920x1080
 ---
