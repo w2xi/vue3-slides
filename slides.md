@@ -869,7 +869,7 @@ function watch(source, cb) {
 
 ---
 
-## reactive
+## reactive 非原始的值影响是方案
 
 实际上之前对拦截器代码的封装，我们已经实现了 `reactive`。
 
@@ -932,6 +932,46 @@ obj.info.foo = 'aaa'
 
 再运行一下代码，发现是符合预期的。
 
+---
+
+## ref 原始值的响应式方案
+
+对于原始数据类型，`number, string...`，JS 底层没有提供任何拦截的方式，JS 只能拦截对象类型的数据。
+
+因此，对于原始数据，可以将其包装成一个对象:
+
+```js
+const wrapper = {
+  value: 'Vue'
+}
+```
+
+访问 `wrapper.value` 等价于访问 `a`，设置 `wrapper.value` 等价于设置 `a`。
+
+---
+
+```js
+// demo: 14.ref.html
+function ref(val) {
+  const wrapper = {
+    value: val
+  }
+  return reactive(wrapper)
+}
+const obj = ref(1)
+effect(() => {
+  console.log(obj.value)
+})
+obj.value = 2 // 修改 obj.value 的值
+```
+
+当修改 `obj.a` 的值时，会触发副作用函数的重新执行，这是符合预期的。
+
+---
+
+但是如果传给 `ref`
+
+---
 
 ---
 layout: image-right
