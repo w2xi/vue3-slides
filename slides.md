@@ -868,6 +868,72 @@ function watch(source, cb) {
 </div>
 
 ---
+
+## reactive
+
+实际上之前对拦截器代码的封装，我们已经实现了 `reactive`。
+
+```js
+function reactive(data) {
+  return new Proxy() {/* ... */}
+}
+```
+
+但是目前还有点缺陷，比如:
+
+```js
+// demo: 12-reactive.html
+const data = { info: { foo: 'bar' } }
+const obj = reactive(data)
+effect(() => {
+  console.log(obj.info.foo) // 'bar'
+})
+obj.info.foo = 'aaa'
+```
+
+当我们修改 `obj.info.foo` 的值，发现副作用函数并没有重新执行。
+
+---
+
+打印 `obj.info` 的值，发现它只是一个普通对象。
+
+```js
+console.log(obj.info) // {foo: 'aaa'}
+```
+
+因此，我们需要在 get 拦截器中做些处理:
+
+```js {all|6-8|all}
+function reactive(data) {
+  return new Proxy({
+    get(target, prop, receiver) {
+      const result = Reflect.get(target, prop, receiver)
+      track(target, prop)
+      if (isObject(result)) {
+        return reactive(result)
+      }
+      return result
+    }
+  })
+}
+```
+
+--- 
+
+```js
+// demo: 13-reactive-2.html
+const data = { info: { foo: 'bar' } }
+const obj = reactive(data)
+effect(() => {
+  console.log(obj.info.foo)
+})
+obj.info.foo = 'aaa'
+```
+
+再运行一下代码，发现是符合预期的。
+
+
+---
 layout: image-right
 image: https://source.unsplash.com/collection/94734566/1920x1080
 ---

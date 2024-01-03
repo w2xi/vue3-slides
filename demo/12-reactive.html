@@ -1,0 +1,71 @@
+<body></body>
+
+<script>
+let activeEffect
+const effectStack = []
+function effect(fn, options = {}) {
+  const effectFn = () => {
+    activeEffect = effectFn
+    effectStack.push(effectFn)
+    const result = fn()
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
+    return result
+  }
+  effectFn.options = options
+  if (!options.lazy) { // 只有非 lazy 的时候，才执行
+    effectFn()
+  }
+  return effectFn // 返回副作用函数
+}
+
+const bucket = new WeakMap()
+
+function reactive(data) {
+  return new Proxy(data, {
+    get(target, prop, receiver) {
+      track(target, prop)
+      const result = Reflect.get(target, prop, receiver)
+      return result
+    },
+    set(target, prop, newVal, receiver) {
+      const result = Reflect.set(target, prop, newVal, receiver)
+      trigger(target, prop)
+      return result
+    }
+  })
+}
+
+function track(target, prop) {
+  if (!activeEffect) return
+  let depsMap = bucket.get(target)
+  if (!depsMap) {
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let deps = depsMap.get(prop)
+  if (!deps) {
+    depsMap.set(prop, (deps = new Set()))
+  }
+  deps.add(activeEffect) // 收集副作用函数
+}
+function trigger(target, prop) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  const effects = depsMap.get(prop)
+  effects && effects.forEach(effectFn => {
+    if (effectFn.options.schedular) {
+      // 如果存在调度器
+      effectFn.options.schedular(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+const data = { info: { foo: 'bar' } }
+const obj = reactive(data)
+effect(() => {
+  console.log(obj.info.foo) // bar
+})
+obj.info.foo = 'aaa' // 修改 obj.info.foo 的值，发现副作用函数并没有执行
+</script>
