@@ -941,15 +941,13 @@ obj.info.foo = 'aaa'
 因此，对于原始数据，可以将其包装成一个对象:
 
 ```js
+let a = 1 // 原始数据
 const wrapper = {
-  value: 'Vue'
+  value: a
 }
+const obj = reactive(wrapper) // 使用 reactive 将其转为响应式数据
 ```
-
-访问 `wrapper.value` 等价于访问 `a`，设置 `wrapper.value` 等价于设置 `a`。
-
----
-
+再封装成 ref 函数:
 ```js
 // demo: 14.ref.html
 function ref(val) {
@@ -965,13 +963,150 @@ effect(() => {
 obj.value = 2 // 修改 obj.value 的值
 ```
 
-当修改 `obj.a` 的值时，会触发副作用函数的重新执行，这是符合预期的。
+当修改 `obj.value` 的值时，会触发副作用函数的重新执行，这是符合预期的。
 
 ---
 
-但是如果传给 `ref`
+现在有了 `ref` 和 `reactive`，那我们如何区分它们呢? 如下代码所示:
+
+```js
+const a = ref(1)
+const b = reactive({ value: 1 })
+```
+
+为了判断一个数据是不是 `ref`，我们可以为其定义一个属性来标志该值是 `ref`
+
+```js {0|all}
+function ref(val) {
+  const wrapper = { value: val }
+  // 定义不可枚举的属性 __v_isRef
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
+  return reactive(wrapper)
+}
+```
 
 ---
+
+## 响应式丢失问题
+
+考虑下面代码：
+
+```js
+const obj = reactive({ foo: 1, bar: 2 })
+const newObj = { ...obj }
+
+effect(() => {
+  console.log(newObj.foo)
+})
+
+newObj.foo = 10
+```
+
+修改 `newObj.foo` 的值，副作用函数并没有重新渲染。
+
+这是因为 `...obj` 已经使数据丢失响应式了，`newObj` 目前只是一个普通对象
+
+```js
+{ ...obj } => { foo: 1, bar: 2 } // 普通对象
+```
+
+---
+
+```js
+const newObj = { ...obj }
+```
+
+转化为如下形式：
+
+```js
+const newObj = {
+  foo: {
+    get value() {
+      return obj.foo
+    }
+  },
+  bar: {
+    get value() {
+      return obj.bar
+    }
+  }
+}
+```
+测试一下:
+```js
+effect(() => {
+  console.log(newObj.foo.value)
+})
+obj.foo = 10 // 修改 foo 的值，副作用函数会重新执行
+```
+
+---
+
+将其封装成 `toRef` 函数
+```js
+function toRef(obj, prop) {
+  const wrapper = {
+    get value() {
+      return obj[prop]
+    },
+    set value(newVal) {
+      obj[prop] = newVal
+    }
+  }
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
+
+  return wrapper
+}
+```
+
+简化一下代码:
+
+```js
+const newObj = { 
+  foo: toRef(obj, 'foo'), 
+  bar: toRef(obj, 'bar') 
+}
+```
+
+---
+
+封装 `toRefs` 函数:
+```js
+function toRefs(obj) {
+  const result = {}
+  for (let key in obj) {
+    result[key] = toRef(obj, key)
+  }
+  return result
+}
+```
+
+测试一下:
+
+```js
+// demo: 15.ref-2.html
+const newObj = { ...toRefs(obj) }
+effect(() => {
+  console.log(newObj.foo.value)
+})
+
+obj.foo = 10 // 修改可以触发执行
+// or
+// newObj.foo.value = 10
+```
+
+---
+layout: center
+---
+
+# 编译器初探
+
+首先来看看整个编译流程:
+
 
 ---
 layout: image-right

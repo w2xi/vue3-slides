@@ -75,9 +75,35 @@ function ref(val) {
   }
   return reactive(wrapper)
 }
-const obj = ref(1)
+function toRef(obj, prop) {
+  const wrapper = {
+    get value() {
+      return obj[prop]
+    },
+    set value(newVal) {
+      obj[prop] = newVal
+    }
+  }
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
+  return wrapper
+}
+function toRefs(obj) {
+  const result = {}
+  for (let key in obj) {
+    result[key] = toRef(obj, key)
+  }
+  return result
+}
+
+const obj = reactive({ foo: 1, bar: 2 })
+const newObj = { ...toRefs(obj) }
 effect(() => {
-  console.log(obj.value)
+  console.log(newObj.foo.value)
 })
-obj.value = 2 // 修改 obj.value 的值
+
+obj.foo = 10 // 会触发副作用函数重新执行
+// or
+// newObj.foo.value = 10
 </script>
