@@ -1109,6 +1109,26 @@ layout: center
 
 首先来看看整个编译流程:
 
+![compile](public/compile-process.excalidraw.png)
+
+如果用伪代码可以这样表示:
+
+```js {all|1|2|3|4|5|all}
+const template = `<div>Hello</div>`
+const templateAST = parse(template)
+const jsAST = transform(templateAST)
+const code = generate(jsAST) // 代码字符串
+const render = new Function(code) // 渲染函数
+```
+
+---
+
+![template-to-render](public/template-to-render.excalidraw.png)
+
+---
+
+## 模板解析 parse
+
 ---
 
 # Learn More
