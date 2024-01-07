@@ -1107,14 +1107,14 @@ layout: center
 
 ---
 
-首先来看看整个编译流程:
+首先来看看编译流程:
 
 ![compile](public/compile-process.excalidraw.png)
 
-如果用伪代码可以这样表示:
+用代码可以这样表示:
 
-```js {all|1|2|3|4|5|all}
-const template = `<div>Hello</div>`
+```js
+const template = `<div><div class="test" :id="dynamicId">Template</div></div>`
 const templateAST = parse(template)
 const jsAST = transform(templateAST)
 const code = generate(jsAST) // 代码字符串
@@ -1125,9 +1125,59 @@ const render = new Function(code) // 渲染函数
 
 ![template-to-render](public/template-to-render.excalidraw.png)
 
+编译器的最终目的就是将**模转换成渲染函数**，而渲染函数的执行会生成虚拟DOM，用于后续的挂载和更新。
+
 ---
 
-## 模板解析 parse
+## 抽象语法树 AST (Abstract Syntax Tree ) 
+
+前面我们已经知道了，模板会被解析器解析成 AST，在 JS 中，AST 本质就是一个 JS 对象。
+
+假设有如下模板:
+
+```js
+const template = `<div class="test"><span>Hello</span></div>`
+```
+
+它对应的 AST 结构如下:
+
+```js
+const ast = {
+  type: 'Root', // 逻辑根节点
+  children: [
+    type: 'Element',
+    tag: 'div',
+    props: { class: 'test' }
+    children: [
+      { 
+        type: 'Element',
+        tag: 'span',
+        children: [ { type: 'Text', content: 'Hello' } ]
+      }
+    ]
+  ]
+}
+```
+
+--- 
+
+## 模板解析器 parser
+
+模板是如何被解析成 AST 的呢？
+
+```js
+function parse(str) {
+  /* ... */
+}
+```
+
+解析器的参数是模板字符串，解析器会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们想要的结果。
+
+举例来说，假设有这样一段模板:
+
+```html
+<div>Vue</div>
+```
 
 ---
 
