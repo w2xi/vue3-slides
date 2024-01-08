@@ -1107,7 +1107,7 @@ layout: center
 
 ---
 
-首先来看看编译流程:
+首先来看看完整的编译流程:
 
 ![compile](public/compile-process.excalidraw.png)
 
