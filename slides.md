@@ -1171,13 +1171,117 @@ function parse(str) {
 }
 ```
 
-解析器的参数是模板字符串，解析器会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们想要的结果。
+解析器的参数是模板字符串，会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们想要的结果。
 
 举例来说，假设有这样一段模板:
 
 ```html
 <div>Vue</div>
 ```
+
+---
+
+```js
+/**
+ * 解析模板字符串
+ * @param {string} str 模板字符串
+ */
+function parse(str) {
+  const context = {
+    // 存储模板字符串
+    source: str,
+    // 前进 num 个字符
+    advanceBy(num) {
+      context.source = context.source.slice(num)
+    },
+    advanceSpaces() {
+      // 匹配空格换行符等
+      const match = /^[\t\r\n\f ]+/.exec(context.source)
+      if (match) {
+        context.advanceBy(match[0].length)
+      }
+    }
+  }
+  const nodes = parseChildren(context, [])
+  const root = { // 根节点
+    type: 'Root',
+    children: nodes
+  }
+  return root
+}
+```
+
+---
+
+```js
+/**
+ * 解析子节点
+ * @param {*} context 上下文
+ * @param {*} ancestors 祖先节点列表
+ */
+function parseChildren(context, ancestors = []) {
+  const nodes = []
+  while (!isEnd(context, ancestors)) { // 如果还没有解析到模板的末尾
+    let node
+    const s = context.source
+    if (s.startsWith('{{')) {
+      // 解析插值表达式
+      node = parseInterpolation(context)
+    } else if (s[0] === '<') {
+      if (s[1] === '/') {
+        // 结束标签
+      } else if (/[a-z]/i.test(s[1])) { // 解析开始标签
+        node = parseElement(context, ancestors)
+      }
+    }
+    if (!node) { // 解析文本节点
+      node = parseText(context)
+    }
+    nodes.push(node)
+  }
+  return nodes
+}
+```
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+/**
+ * 解析插值表达式
+ * @param {*} context 上下文
+ * @example
+ * 
+ * 模板: {{ msg }}
+ */
+function parseInterpolation(context) {
+  const { advanceBy } = context
+  // 移除 {{
+  advanceBy(2)
+  const closeIndex = context.source.indexOf('}}')
+  const rawContent = context.source.slice(0, closeIndex)
+  // 去掉前后空格
+  const content = rawContent.trim()
+  advanceBy(rawContent.length)
+  // 移除 }}
+  advanceBy(2)
+
+  return {
+    type: 'Interpolation',
+    content: {
+      type: 'Expression',
+      content
+    }
+  }
+}
+```
+
+```js
+
+```
+
+</div>
 
 ---
 
