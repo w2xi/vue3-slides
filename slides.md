@@ -1171,13 +1171,9 @@ function parse(str) {
 }
 ```
 
-解析器的参数是模板字符串，会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们想要的结果。
+解析器的参数是模板字符串，会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们期望的结果。
 
-举例来说，假设有这样一段模板:
-
-```html
-<div>Vue</div>
-```
+接下来直接上代码，看看是如何处理模板的。
 
 ---
 
@@ -1213,6 +1209,8 @@ function parse(str) {
 
 ---
 
+<div grid="~ cols-2 gap-2">
+
 ```js
 /**
  * 解析子节点
@@ -1243,6 +1241,24 @@ function parseChildren(context, ancestors = []) {
 }
 ```
 
+```js
+/**
+ * 是否解析结束
+ * @param {*} context 
+ * @param {*} ancestors 
+ */
+function isEnd(context, ancestors) {
+  if (!context.source) return true
+  // 与节点栈内全部的节点比较
+  for (let i = ancestors.length - 1; i >= 0; --i) {
+    if (context.source.startsWith(`</${ancestors[i].tag}`)) {
+      return true
+    }
+  }
+}
+```
+
+</div>
 ---
 
 <div grid="~ cols-2 gap-2">
@@ -1251,7 +1267,7 @@ function parseChildren(context, ancestors = []) {
 /**
  * 解析插值表达式
  * @param {*} context 上下文
- * @example
+ * @examples
  * 
  * 模板: {{ msg }}
  */
@@ -1278,10 +1294,113 @@ function parseInterpolation(context) {
 ```
 
 ```js
+/**
+ * 解析文本
+ * @param {*} context 
+ * @examples
+ * case 1: template</div>
+ * case 2: template {{ msg }}</div>
+ */
+function parseText(context) {
+  let endIndex = context.source.length
+  const ltIndex = context.source.indexOf('<')
+  const delimiterIndex = context.source.indexOf('{{')
 
+  if (ltIndex > -1 && ltIndex < endIndex) {
+    endIndex = ltIndex
+  }
+  if (delimiterIndex > -1 && delimiterIndex < endIndex) {
+    endIndex = delimiterIndex
+  }
+  const content = context.source.slice(0, endIndex)
+
+  context.advanceBy(content.length)
+
+  return {
+    type: 'Text',
+    content
+  }
+}
 ```
 
 </div>
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+/**
+ * 解析元素
+ * @param {*} context 
+ * @param {*} ancestors 
+ */
+function parseElement(context, ancestors) {
+  // 解析开始标签
+  // <div></div>
+  const element = parseTag(context)
+
+  ancestors.push(element)
+  element.children = parseChildren(context, ancestors)
+  ancestors.pop()
+
+  if (context.source.startsWith(`</${element.tag}`)) {
+    // 解析结束标签
+    parseTag(context, 'end')
+  } else {
+    console.error(`缺失结束标签：${element.tag}`)
+  }
+
+  return element
+}
+```
+
+```js
+// 解析标签
+function parseTag(context, type = 'start') {
+  const { source, advanceBy, advanceSpaces } = context
+  // <div></div>
+  // type=start: ['<div', 'div', index: 0, input: '<div>', groups: undefined]
+  const match =
+    type === 'start'
+      ? /^<([a-z][^\t\r\n\f />]*)/i.exec(source) // 匹配开始标签
+      : /^<\/([a-z][^\t\r\n\f />]*)/i.exec(source) // 匹配结束标签
+  const tag = match[1]
+  // 移除 <div
+  advanceBy(match[0].length)
+  // 移除多余空格
+  advanceSpaces()
+  const props = parseAttributes(context)
+  // 暂时不处理自闭合标签
+  // 移除 >
+  advanceBy(1)
+
+  return {
+    type: 'Element',
+    tag,
+    props,
+    children: []
+  }
+}
+```
+
+</div>
+
+---
+
+运行一下代码，看看效果:
+
+```js
+// demo: 20-parse-template.html
+
+console.log('开始解析:')
+const ast = parse(
+  `<div id="foo" class="bar"><p>{{ msg }}</p><p>Template</p></div>`
+)
+
+console.log(ast)
+console.log(JSON.stringify(ast, null, 2))
+```
 
 ---
 
