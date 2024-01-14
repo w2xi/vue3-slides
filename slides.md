@@ -1125,7 +1125,7 @@ const render = new Function(code) // 渲染函数
 
 ![template-to-render](public/template-to-render.excalidraw.png)
 
-编译器的最终目的就是将**模转换成渲染函数**，而渲染函数的执行会生成虚拟DOM，用于后续的挂载和更新。
+编译器的最终目的就是将**模板转换成渲染函数**，而渲染函数的执行会生成虚拟DOM，用于后续的挂载和更新。
 
 ---
 
@@ -1139,7 +1139,7 @@ const render = new Function(code) // 渲染函数
 const template = `<div class="test"><span>Hello</span></div>`
 ```
 
-它对应的 AST 结构如下:
+经过解析之后，它对应的 AST 结构如下:
 
 ```js
 const ast = {
@@ -1147,7 +1147,7 @@ const ast = {
   children: [
     type: 'Element',
     tag: 'div',
-    props: { class: 'test' }
+    props: [{ type: 'Attribute', name: 'class', value: 'test'}]
     children: [
       { 
         type: 'Element',
@@ -1156,6 +1156,98 @@ const ast = {
       }
     ]
   ]
+}
+```
+
+---
+
+## 节点类型
+
+<div grid="~ cols-2 gap-2">
+
+<div>
+
+根节点:
+
+```js
+{
+  type: 'Root',
+  children: Array,
+}
+```
+</div>
+
+<div>
+
+元素节点:
+
+```js
+{
+  type: 'Element',
+  tag: String,
+  props: Array,
+  children:Array,
+  ...
+}
+```
+</div>
+
+</div>
+
+<div grid="~ cols-2 gap-2">
+
+<div>
+
+属性节点:
+
+```js
+{
+  type: 'Attribute',
+  name: String,
+  value: String,
+}
+```
+</div>
+
+<div>
+
+插值表达式节点:
+
+```js
+{
+  type: 'Interpolation',
+  content: {
+    type: 'Expression',
+    content: String,
+  },
+}
+```
+
+</div>
+
+</div>
+
+---
+
+文本节点:
+
+```js
+{
+  type: 'Text',
+  content: String,
+}
+```
+
+定义节点类型:
+
+```js
+const NodeTypes = {
+  ROOT: 'Root',
+  ELEMENT: 'Element',
+  TEXT: 'Text',
+  INTERPOLATION: 'Interpolation',
+  ATTRIBUTE: 'Attribute',
+  SIMPLE_EXPRESSION: 'SimpleExpression',
 }
 ```
 
@@ -1171,7 +1263,7 @@ function parse(str) {
 }
 ```
 
-解析器的参数是模板字符串，会逐个读取字符串模板的字符，并根据一定的规则将其处理为我们期望的结果。
+解析器的参数是模板字符串，会逐个读取字符串模板的字符，并根据一定的规则提取处有用的信息，并形成一个个节点，最终构成一个 AST。
 
 接下来直接上代码，看看是如何处理模板的。
 
@@ -1200,7 +1292,7 @@ function parse(str) {
   }
   const nodes = parseChildren(context, [])
   const root = { // 根节点
-    type: 'Root',
+    type: NodeTypes.ROOT,
     children: nodes
   }
   return root
@@ -1284,9 +1376,9 @@ function parseInterpolation(context) {
   advanceBy(2)
 
   return {
-    type: 'Interpolation',
+    type: NodeTypes.INTERPOLATION ,
     content: {
-      type: 'Expression',
+      type: NodeTypes.SIMPLE_EXPRESSION,
       content
     }
   }
@@ -1317,7 +1409,7 @@ function parseText(context) {
   context.advanceBy(content.length)
 
   return {
-    type: 'Text',
+    type: NodeTypes.TEXT,
     content
   }
 }
@@ -1376,7 +1468,7 @@ function parseTag(context, type = 'start') {
   advanceBy(1)
 
   return {
-    type: 'Element',
+    type: NodeTypes.ELEMENT,
     tag,
     props,
     children: []
