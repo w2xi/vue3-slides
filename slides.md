@@ -1496,6 +1496,101 @@ console.log(JSON.stringify(ast, null, 2))
 
 ---
 
+## transform 
+
+---
+
+## codegen 代码生成
+
+---
+
+## compile 实现
+
+有了之前实现的 `parse`，`transform` 和 `codegen`，现在我们将其整合起来，实现一个完整的编译。
+
+<div grid="~ cols-2 gap-2">
+
+```js
+// demo: 21-compile.html
+
+/**
+ * 将模板编译为渲染函数字符串
+ * @param {String} template 模板
+ * @returns {String} 渲染函数字符串
+ */
+function baseCompile(template) {
+  const ast = parse(template)
+  transform(
+    ast,
+    {
+      nodeTransforms: [
+        transformElement,
+        transformText,
+        transformExpression,
+      ]
+    }
+  )
+  const code = generate(ast)
+  return code
+}
+```
+
+```js
+/**
+ * 将模板编译为渲染函数
+ * @param {String} template 模板
+ * @returns {Function} 渲染函数
+ */
+function compileToFunction(template) {
+  const { code } = baseCompile(template)
+  const render = new Function(code)()
+  return render
+}
+```
+
+</div>
+
+---
+
+## counter 计数器 demo
+
+<div grid="~ cols-2 gap-2">
+
+```html
+<div id="app">
+  <div class="demo">
+    <button @click="minus">-1</button>
+    <span class="count">{{ count }}</span>
+    <button @click="plus">+1</button>
+  </div>
+</div>
+```
+
+```js
+const { createApp, ref } = MiniVue
+const count = ref(0)
+
+createApp({
+  setup() {
+    const plus = () => {
+      count.value++
+    }
+    const minus = () => {
+      count.value--
+    }
+    return {
+      count,
+      plus,
+      minus
+    }
+  }
+}).mount('#app')
+```
+
+</div>
+
+---
+
 # Learn More
 
 [Documentations](https://sli.dev) · [GitHub](https://github.com/slidevjs/slidev) · [Showcases](https://sli.dev/showcases.html)

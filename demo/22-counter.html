@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./static/mini-vue.umd.js"></script>
+  <style>
+    .red {
+      color: red;
+    }
+    .demo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .count {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"><div class="demo"><button @click="minus">-1</button><span class="count">{{ count }}</span><button @click="plus">+1</button></div></div>
+  <script>
+    const { createApp, ref } = MiniVue
+    const count = ref(0)
+
+    createApp({
+      setup() {
+        const plus = () => {
+          count.value++
+        }
+        const minus = () => {
+          count.value--
+        }
+        return {
+          count,
+          plus,
+          minus
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>

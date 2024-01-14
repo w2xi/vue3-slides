@@ -1,0 +1,14 @@
+<body></body>
+
+<script src="./static/mini-vue.umd.js"></script>
+
+<script>
+const { compileToFunction } = MiniVue
+
+const template = `<div id="foo" class="bar"><p>{{ msg }}</p><p>Template</p></div>`
+const render = compileToFunction(template)
+
+console.log('模板:', template)
+console.log(render)
+</script>
+
