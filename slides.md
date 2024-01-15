@@ -1697,6 +1697,54 @@ function processExpression(node) {
 
 ## codegen 代码生成
 
+`codegen` 主入口函数:
+
+```js
+// 代码生成
+function generate(ast) {
+  // 创建上下文
+  const context = createCodegenContext()
+  // 生成代码
+  genCode(ast.codegenNode, context)
+
+  return {
+    code: context.code // 渲染函数代码字符串
+  }
+}
+```
+
+---
+
+```js
+// 创建上下文，格式化代码字符串
+function createCodegenContext() {
+  const context = {
+    code: '',
+    helper(key) {
+      return `_${helperNameMap[key]}`
+    },
+    push(code) {
+      context.code += code
+    },
+    // 当前缩进级别，初始值为0，即没有缩进
+    currentIndent: 0,
+    // 换行
+    newLine() {
+      context.code += '\n' + '  '.repeat(context.currentIndent * 2)
+    },
+    indent() { // 缩进
+      context.currentIndent++
+      context.newLine()
+    },
+    deIndent() { // 取消缩进
+      context.currentIndent--
+      context.newLine()
+    }
+  }
+  return context
+}
+```
+
 ---
 
 ## compile 实现
