@@ -1834,6 +1834,9 @@ createApp({
 
 ---
 
-# Learn More
+## 参考
 
-[Documentations](https://sli.dev) · [GitHub](https://github.com/slidevjs/slidev) · [Showcases](https://sli.dev/showcases.html)
+- 《Vue.js 设计与实现》by 霍春阳
+- https://github.com/vuejs/core
+- https://github.com/cuixiaorui/mini-vue
+- https://github.com/tim101010101/beggar-vue
