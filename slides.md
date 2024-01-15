@@ -1717,8 +1717,10 @@ function generate(ast) {
 
 ---
 
+<div grid="~ cols-2 gap-2">
+
 ```js
-// 创建上下文，格式化代码字符串
+// 创建上下文，用于格式化代码字符串
 function createCodegenContext() {
   const context = {
     code: '',
@@ -1728,10 +1730,8 @@ function createCodegenContext() {
     push(code) {
       context.code += code
     },
-    // 当前缩进级别，初始值为0，即没有缩进
-    currentIndent: 0,
-    // 换行
-    newLine() {
+    currentIndent: 0, // 当前缩进级别，初始值为0，即没有缩进
+    newLine() { // 换行
       context.code += '\n' + '  '.repeat(context.currentIndent * 2)
     },
     indent() { // 缩进
@@ -1747,6 +1747,213 @@ function createCodegenContext() {
 }
 ```
 
+```js
+// 生成渲染函数代码字符串
+function genCode(node, context) {
+  const { push, indent, deIndent } = context
+  const fnName = 'render'
+  const args = ['_ctx', 'config']
+  const signature = args.join(', ')
+
+  push(`return `)
+  push(`function ${fnName}(`)
+  push(signature)
+  push(`) `)
+  push(`{`)
+  // 缩进
+  indent()
+  push(`const { h, _toDisplayString } = config`)
+  indent()
+  push(`return `)
+  genNode(node, context)
+  // 取消缩进
+  deIndent()
+  push(`}`)
+}
+```
+
+</div>
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+// 根据节点类型生成对应代码
+function genNode(node, context) {
+  switch (node.type) {
+    case NodeTypes.INTERPOLATION:
+      genInterpolation(node, context)
+      break
+    case NodeTypes.SIMPLE_EXPRESSION:
+      genExpression(node, context)
+      break
+    case NodeTypes.ELEMENT:
+      genElement(node, context)
+      break
+    case NodeTypes.TEXT:
+      genText(node, context)
+      break
+  }
+}
+```
+
+```js
+/**
+  example:
+  { 
+    type: 'Interpolation', 
+    content: { 
+      type: 'Expression',
+      content: '_ctx.msg',
+    } 
+  }
+  =>
+  '_ctx.msg'
+*/
+function genInterpolation(node, context) {
+  const { push, helper } = context
+  push(`${helper(TO_DISPLAY_STRING)}(`)
+  genNode(node.content, context)
+  push(`)`)
+}
+
+function genExpression(node, context) {
+  context.push(node.content)
+}
+// { type: 'Text', content: 'hello' } => 'hello'
+function genText(node, context) {
+  const { push } = context
+  push(`'${node.content}'`)
+}
+```
+
+</div>
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+/**
+ * 生成调用表达式
+ * @example
+ * const node = [
+ *   type: 'Element', tag: 'div', props: { id: 'foo' }
+ *   children: [ { type: 'Text', content: 'hello' } ]
+ * ]
+ * => h('div', { id: 'foo' }, 'hello')
+ * )
+ */
+function genElement(node, context) {
+  const { push, helper } = context
+  const { tag, props, children } = node
+  push(`h('${tag}', `)
+
+  if (props) {
+    genProps(props, context)
+  } else {
+    push('null, ')
+  }
+  if (children) {
+    genChildren(children, context)
+  } else {
+    push('null')
+  }
+  push(`)`)
+}
+```
+
+```js
+// const props = [
+//   { type: 'Attribute', name: 'id', value: 'foo' },
+//   { type: 'Attribute', name: 'class', value: 'bar' }
+// ]
+// => { id: 'foo', class: 'bar' }
+//
+function genProps(props, context) {
+  const { push } = context
+  if (!props.length) {
+    push('{}, ')
+    return
+  }
+  push('{ ')
+
+  for (let i = 0; i < props.length; i++) {
+    const prop = props[i]
+    const key = prop ? prop.name : ''
+    const value = prop ? prop.value : prop
+    push(JSON.stringify(key))
+    push(': ')
+    push(prop.isStatic ? JSON.stringify(value) : value)
+    if (i < props.length - 1) {
+      push(', ')
+    }
+  }
+  push(' }, ')
+}
+```
+
+</div>
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+// 处理子节点
+function genChildren(children, context) {
+  genArrayExpression(children, context)
+}
+
+/**
+ * 生成数组表达式
+ * @example
+ * const node = [{ 
+ *    type: 'Element', 
+ *    tag: 'span', 
+ *    children: [
+ *      { type: 'Text', text: 'hello' }
+ *    ]
+ * }]
+ * =>
+ * [h('span', null, 'hello')
+ */
+function genArrayExpression(node, context) {
+  const { push } = context
+  // 追加方括号
+  push('[')
+  // 为数组元素生成代码
+  genNodeList(node, context)
+  push(']')
+}
+```
+
+```js
+/**
+ * 生成节点列表
+ * @param {Array} nodes
+ * @param {Object} context
+ * @example
+ */
+function genNodeList(nodes, context) {
+  const { push } = context
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    if (typeof node === 'string') {
+      push(`'${node}'`)
+    } else {
+      genNode(node, context)
+    }
+    if (i < nodes.length - 1) { // 最后一个参数不需要逗号
+      push(', ')
+    }
+  }
+}
+```
+
+</div>
+
 ---
 
 ## compile 实现
@@ -1756,8 +1963,6 @@ function createCodegenContext() {
 <div grid="~ cols-2 gap-2">
 
 ```js
-// demo: 21-compile.html
-
 /**
  * 将模板编译为渲染函数字符串
  * @param {String} template 模板
@@ -1781,6 +1986,8 @@ function baseCompile(template) {
 ```
 
 ```js
+// demo: 21-compile.html
+
 /**
  * 将模板编译为渲染函数
  * @param {String} template 模板
@@ -1879,6 +2086,7 @@ demo: `22-counter.html`
 <div grid="~ cols-2 gap-2">
 
 ```html
+<script src="./static/mini-vue.umd.js"></script>
 <div id="app">
   <div class="demo">
     <button @click="minus">-1</button>
@@ -1916,12 +2124,3 @@ layout: center
 ---
 
 # 感谢观看
-
----
-
-## 参考
-
-- 《Vue.js 设计与实现》by 霍春阳
-- https://github.com/vuejs/core
-- https://github.com/cuixiaorui/mini-vue
-- https://github.com/tim101010101/beggar-vue
