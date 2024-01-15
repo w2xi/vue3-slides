@@ -12,11 +12,13 @@ mdc: true
 
 # Vue3 响应式系统和编译器初探
 
-<div class="pt-12">
+by 夏影
+
+<!-- <div class="pt-12">
   <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
     Press Space for next page <carbon:arrow-right class="inline"/>
   </span>
-</div>
+</div> -->
 
 <!--
 The last comment block of each slide will be treated as slide notes. It will be visible and editable in Presenter Mode along with the slide. [Read more in the docs](https://sli.dev/guide/syntax.html#notes)
@@ -1908,6 +1910,12 @@ createApp({
 ```
 
 </div>
+
+---
+layout: center
+---
+
+# 感谢观看
 
 ---
 

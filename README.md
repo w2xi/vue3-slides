@@ -1,11 +1,11 @@
-# Welcome to [Slidev](https://github.com/slidevjs/slidev)!
+# Vue3 响应式系统和编译器初探
 
-To start the slide show:
+响应式系统:
 
-- `npm install`
-- `npm run dev`
-- visit http://localhost:3030
-
-Edit the [slides.md](./slides.md) to see the changes.
-
-Learn more about Slidev on [documentations](https://sli.dev/).
+- [x] 副作用函数 effect
+- [x] 依赖收集 track, 依赖更新 trigger
+- [x] reactive
+- [x] ref
+- [x] computed
+- [x] watch
+- [ ] 自动脱 ref
