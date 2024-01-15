@@ -1496,7 +1496,202 @@ console.log(JSON.stringify(ast, null, 2))
 
 ---
 
-## transform 
+## transform 转换器
+
+前面已经实现了 解析器(parser) —— 将模板字符串解析为 AST 语法树，接下来需要实现 transform 转换器，进一步处理模板 AST，为后期的代码生成做准备。
+
+做了什么工作:
+
+- 预处理插值
+- 生成 codegenNode 节点，用于后续的代码生成
+- 生成 patchFlag
+- 处理指令
+- ...
+
+接下来看看代码实现。
+
+---
+
+主入口函数 `transform`:
+
+```js
+/**
+ * AST 转换
+ * @param {Object} root 根节点
+ * @param {Object} options 配置项
+ */
+export function transform(root, options = {}) {
+  // 创建上下文
+  const context = createTransformContext(root, options)
+  // 遍历 ast
+  traverseNode(root, context)
+  // 处理根节点
+  createRootCodegen(root)
+}
+```
+
+---
+
+创建上下文
+
+<div grid="~ cols-2 gap-2">
+
+```js
+function createTransformContext(
+  root,
+  { nodeTransforms = [] }
+) {
+  const context = {
+    currentNode: null, // 当前转换的节点
+    root, // 根节点
+    parent: null, // 当前转换节点的父节点
+    nodeTransforms, // 节点转换函数列表
+  }
+
+  return context
+}
+```
+
+```js
+{
+  nodeTransforms: [
+    transformElement,
+    transformExpression,
+    transformText,
+  ]
+}
+```
+
+</div>
+
+---
+
+```js
+// 遍历 AST，执行 transforms
+function traverseNode(ast, context) {
+  context.currentNode = ast
+  const exitFns = [] // 保存退出函数
+  const transforms = context.nodeTransforms
+  for (let i = 0; i < transforms.length; i++) {
+    // 执行转换操作，返回待执行的一个回调函数
+    const onExit = transforms[i](context.currentNode, context)
+    if (onExit) exitFns.push(onExit)
+    // 由于转换函数可能移除当前节点，因此需要在转换函数执行之后检查当前节点是否存在，如果不存在，则直接返回
+    if (!context.currentNode) return
+  }
+  const children = context.currentNode.children
+  if (children) {
+    children.forEach((child, index) => {
+      context.parent = context.currentNode
+      traverseNode(child, context)
+    })
+  }
+  let size = exitFns.length
+  // 回调函数反序执行，从叶节点往根节点执行
+  // 保证了 先处理子节点 再处理父节点
+  while (size--) {
+    exitFns[size]()
+  }
+}
+```
+
+---
+
+拿到子节点的 `codegenNode`，将其挂载到 `root` 上
+
+```js
+function createRootCodegen(root) {
+  const { children } = root
+  if (children.length === 1) { 
+    // 单根节点
+    const child = children[0]
+    if (child.type === NodeTypes.ELEMENT && child.codegenNode) {
+      const codegenNode = child.codegenNode
+      root.codegenNode = codegenNode
+    } else {
+      root.codegenNode = child
+    }
+  } else if (children.length > 1) {
+    // 多根节点
+  } else {
+    // no children
+  }
+}
+```
+
+---
+
+生成 `codegenNode` 节点:
+
+```js
+function transformElement(node, context) {
+  // 返回一个退出函数
+  return () => {
+    if (node.type !== NodeTypes.ELEMENT) return
+    const type = node.type
+    const tag = node.tag
+    const props = node.props
+    const children = node.children
+    // 简单处理下
+    node.props.forEach(prop => {
+      if (!prop.isStatic) {
+        prop.value = `_ctx.${prop.value}`
+      }
+    })
+    node.codegenNode = {
+      type,
+      tag,
+      props,
+      children
+    }
+    // ... 在源码中这块其实是非常复杂的
+  }
+}
+```
+
+---
+
+处理插值表达式
+
+<div grid="~ cols-2 gap-2">
+
+```js
+function transformExpression(node) {
+  if (node.type === NodeTypes.INTERPOLATION) {
+    node.content = processExpression(node.content)
+  }
+}
+
+function processExpression(node) {
+  node.content = `_ctx.${node.content}`
+  return node
+}
+```
+
+```js
+
+// 模板: {{ msg }}
+
+{
+  type: NodeTypes.INTERPOLATION,
+  content: {
+    type: NodeTypes.SIMPLE_EXPRESSION,
+    content: 'msg'
+  }
+}
+
+// 转换 =>
+
+{
+  type: NodeTypes.INTERPOLATION,
+  content: {
+    type: NodeTypes.SIMPLE_EXPRESSION,
+    content: '_ctx.msg'
+  }
+}
+```
+
+</div>
 
 ---
 
