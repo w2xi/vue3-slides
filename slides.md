@@ -1795,7 +1795,84 @@ function compileToFunction(template) {
 
 ---
 
+## 挂载&更新
+
+前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载和更新** (这里不涉及 patch)。
+
+---
+
+<div grid="~ cols-2 gap-2">
+
+```js
+function createApp(options = {}) {
+  const app = {
+    mount(container) {
+      if (isString(container)) {
+        container = document.querySelector(container)
+      }
+      const template = container.innerHTML
+      const render = compileToFunction(template)
+      const setupFn = options.setup || noop
+      const setupResult = setupFn() || {}
+      const data = proxyRefs(setupResult)
+
+      const reload = () => {
+        const vnode = render(data, { h, _toDisplayString: function toString(val) { return val && val.toString() } })
+        container.innerHTML = ''
+        _mount(vnode, container)
+      }
+      // 副作用函数
+      effect(() => {
+        reload()
+      })
+    }
+  }
+  return app
+}
+```
+
+```js
+// 挂载
+function _mount(vnode, container) {
+  const el = document.createElement(vnode.tag)
+  if (vnode.props) {
+      for (let key in vnode.props) {
+          if (key.startsWith('on')) { // 事件绑定
+              const eventName = key.slice(2).toLowerCase()
+              el.addEventListener(eventName, vnode.props[key])
+          } else {
+              el.setAttribute(key, vnode.props[key])
+          }
+      }
+  }
+  if (Array.isArray(vnode.children)) {
+    if (vnode.children.length === 1 && typeof vnode.children[0] != 'object') {
+      el.textContent = vnode.children[0]
+    } else {
+      vnode.children.forEach(child => {
+          _mount(child, el)
+      })
+    }
+  } else { // string
+      el.textContent = vnode.children
+  }
+  container.appendChild(el)
+}
+```
+
+</div>
+
+---
+
+现在代码应该可以跑起来了，并且能够响应式更新。
+
+接下来来看一个 **计数器 demo**。
+
+---
+
 ## counter 计数器 demo
+
+demo: `22-counter.html`
 
 <div grid="~ cols-2 gap-2">
 
