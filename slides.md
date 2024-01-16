@@ -20,9 +20,37 @@ by 夏影
   </span>
 </div> -->
 
-<!--
-The last comment block of each slide will be treated as slide notes. It will be visible and editable in Presenter Mode along with the slide. [Read more in the docs](https://sli.dev/guide/syntax.html#notes)
--->
+---
+
+# 目录
+
+<div grid="~ cols-2 gap-4">
+
+<div>
+
+- 响应式系统
+  + 副作用函数 effect
+  + reactive
+  + ref
+  + computed
+  + watch
+  + 自动脱 ref
+
+- 编译器
+  + 解析器 parser
+  + 转换器 transform
+  + 代码生成 generate
+
+</div>
+
+<div>
+
+- Demo
+  + 计数器 Counter
+
+</div>
+
+</div>
 
 ---
 layout: center
@@ -871,7 +899,7 @@ function watch(source, cb) {
 
 ---
 
-## reactive 非原始的值影响是方案
+## 非原始的值影响是方案: reactive
 
 实际上之前对拦截器代码的封装，我们已经实现了 `reactive`。
 
@@ -936,7 +964,7 @@ obj.info.foo = 'aaa'
 
 ---
 
-## ref 原始值的响应式方案
+## 原始值的响应式方案: ref
 
 对于原始数据类型，`number, string...`，JS 底层没有提供任何拦截的方式，JS 只能拦截对象类型的数据。
 
@@ -2120,7 +2148,18 @@ createApp({
 </div>
 
 ---
-layout: center
+layout: image
+image: public/mikoto-misaka.jpg
 ---
 
-# 感谢观看
+<style>
+.thanks {
+  position: absolute;
+  top: 50%;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+  letter-spacing: 0.3em;
+}
+</style>
+
+<h1 class="thanks">感谢观看</h1>
