@@ -23,6 +23,7 @@
 <body>
   <div id="app"><div class="demo"><button @click="minus">-1</button><span class="count">{{ count }}</span><button @click="plus">+1</button></div></div>
   <script>
+    console.log('MiniVue:', MiniVue)
     const { createApp, ref } = MiniVue
     const count = ref(0)
 

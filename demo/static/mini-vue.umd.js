@@ -948,11 +948,46 @@
     // 创建上下文
     const context = createCodegenContext();
     genCode(ast.codegenNode, context);
-    // genNode(node, context)
 
     return {
       code: context.code // 渲染函数代码
     }
+  }
+
+  /**
+   * 以渲染函数为例，生成类似 `function render(...)  { return ... }` 代码字符串
+   with(ctx) {...}
+   * @param {Object} node JS AST
+   * @param {Object} context
+   */
+   function genCode(node, context) {
+    // 工具函数
+    const { push, indent, deIndent } = context;
+    const fnName = 'render';
+    const args = ['_ctx'];
+    const signature = args.join(', ');
+
+    // 用于最后将代码字符串转为函数
+    // new Function(code)
+    push(`return `);
+    push(`function ${fnName}(`);
+
+    // 生成函数参数代码字符串
+    // genNodeList(node.params, context)
+    push(signature);
+    push(`) `);
+    push(`{`);
+    // 缩进
+    indent();
+    push(`const { h, toDisplayString: _toDisplayString } = MiniVue`);
+    indent();
+    push(`return `);
+    // 为函数体生成代码，这里递归地调用 genNode 函数
+    // node.body.forEach(n => genNode(n, context))
+    genNode(node, context);
+    // 取消缩进
+    deIndent();
+    push(`}`);
   }
 
   /**
@@ -974,27 +1009,6 @@
       case NodeTypes.TEXT:
         genText(node, context);
         break
-      // case 'FunctionDecl':
-      //   genFunctionDecl(node, context)
-      //   break
-      // case 'ReturnStatement':
-      //   genReturnStatement(node, context)
-      //   break
-      // case 'CallExpression':
-      //   genCallExpression(node, context)
-      //   break
-      // case 'StringLiteral':
-      //   genStringLiteral(node, context)
-      //   break
-      // case 'ArrayExpression':
-      //   genArrayExpression(node, context)
-      //   break
-      // case 'Interpolation':
-      //   genInterpolation(node, context)
-      //   break
-      // case 'Expression':
-      //   genExpression(node, context)
-      //   break
     }
   }
 
@@ -1023,7 +1037,6 @@
     } else {
       push('null');
     }
-    // genNodeList([tag, props, children], context)
     push(`)`);
   }
 
@@ -1086,42 +1099,6 @@
   }
 
   /**
-   * 以渲染函数为例，生成类似 `function render(...)  { return ... }` 代码字符串
-   with(ctx) {...}
-   * @param {Object} node JS AST
-   * @param {Object} context
-   */
-  function genCode(node, context) {
-    // 工具函数
-    const { push, indent, deIndent } = context;
-    const fnName = 'render';
-    const args = ['_ctx', 'config'];
-    const signature = args.join(', ');
-
-    // 用于最后将代码字符串转为函数
-    // new Function(code)
-    push(`return `);
-    push(`function ${fnName}(`);
-
-    // 生成函数参数代码字符串
-    // genNodeList(node.params, context)
-    push(signature);
-    push(`) `);
-    push(`{`);
-    // 缩进
-    indent();
-    push(`const { h, _toDisplayString } = config`);
-    indent();
-    push(`return `);
-    // 为函数体生成代码，这里递归地调用 genNode 函数
-    // node.body.forEach(n => genNode(n, context))
-    genNode(node, context);
-    // 取消缩进
-    deIndent();
-    push(`}`);
-  }
-
-  /**
    * 生成数组表达式
    * @param {Object} node
    * @param {Object} context
@@ -1136,15 +1113,9 @@
   }
 
   /**
+   * 生成节点列表
    * @param {Array} nodes
    * @param {Object} context
-   * @example
-   *
-   * const nodes = ['节点1', '节点2', '节点3']
-   * => 生成的字符串为
-   * '节点1, 节点2, 节点3'
-   * 如果在这段代码前后添加圆括号，那么就可以用于函数的参数声明: ('节点1, 节点2, 节点3')
-   * 如果在这段代码前后添加方括号，那么它就是一个数组: ['节点1, 节点2, 节点3']
    */
   function genNodeList(nodes, context) {
     const { push } = context;
@@ -1244,6 +1215,12 @@
     }
   }
 
+  /**
+   * 创建 transform 上下文
+   * @param {*} root 
+   * @param {*} options
+   * @returns 
+   */
   function createTransformContext(
     root,
     { nodeTransforms = [] }
@@ -1253,6 +1230,7 @@
       currentNode: null,
       // 当前节点在父节点的 children 中的位置索引
       childIndex: 0,
+      root,
       // 当前转换节点的父节点
       parent: null,
       // 用于替换节点的函数，接收新节点作为参数
@@ -1387,7 +1365,7 @@
         const data = proxyRefs(setupFn());
 
         const reload = () => {
-          const vnode = render(data, { h, _toDisplayString: function toString(val) { return val && val.toString() } });      
+          const vnode = render(data);      
           container.innerHTML = '';
           _mount(vnode, container);
         };
@@ -1429,6 +1407,10 @@
     container.appendChild(el);
   }
 
+  const toDisplayString = (val) => {
+    return String(val)
+  };
+
   exports.baseCompile = baseCompile;
   exports.compileToFunction = compileToFunction;
   exports.computed = computed;
@@ -1441,6 +1423,7 @@
   exports.ref = ref;
   exports.shallowReactive = shallowReactive;
   exports.shallowReadonly = shallowReadonly;
+  exports.toDisplayString = toDisplayString;
   exports.toRef = toRef;
   exports.toRefs = toRefs;
   exports.watch = watch;
