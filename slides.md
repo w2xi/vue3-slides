@@ -2206,7 +2206,7 @@ createApp({
 
 ---
 layout: image
-image: /public/mikoto-misaka.jpg
+image: /mikoto-misaka.jpg
 ---
 
 <style>
