@@ -9,7 +9,6 @@
     - [x] ref
     - [x] computed
     - [x] watch
-    - [ ] 自动脱 ref
 - 编译器
     - [x] 模板解析器 parse
     - [x] 转化器 transform
