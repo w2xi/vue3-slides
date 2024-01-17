@@ -132,7 +132,7 @@ a = 10 // 修改 a 的值, 我们期待会重新执行 update 方法，并且 su
 
 我们知道，在 ES6(ES2015) 之前，如果想拦截数据的读取和赋值操作，只能使用 `Object.defineProperty()` 将对象属性转换为 getter / setter 的形式，这也是 Vue2 所采用的方式，但是在 ES6+ 中，我们可以使用代理 `Proxy` 来实现对数据的拦截。
 
-[简单了解下 Proxy & Reflect](https://w2xi.github.io/vue3-anaysis/proxy-and-reflect.html)
+[简单了解下 Proxy & Reflect](https://w2xi.github.io/vue3-analysis/prerequisites/proxy-and-reflect.html)
 
 现在我们重新定义一些术语:
 
