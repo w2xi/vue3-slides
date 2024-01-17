@@ -93,7 +93,7 @@ function update() {
 
 然后我们定义一些新术语:
 
-- `update()`: 产生副作用的函数，简称副作用函数，它会修改了 sum 的状态
+- `update()`: 产生副作用的函数，简称副作用函数，它会修改 sum 的状态
 - `a` 和 `b`: 副作用函数的依赖
 
 同时，假设还存在一个魔术方法 `whenDepsChange`，当依赖 a 和 b 发生变化时，重新执行 update 方法
@@ -126,8 +126,6 @@ a = 10 // 修改 a 的值, 我们期待会重新执行 update 方法，并且 su
 
 当然，接下来我们来了解下如何实现响应式数据。
 
----
-layout: default
 ---
 
 ## 如何实现响应式数据
@@ -188,8 +186,13 @@ obj.text = 'Hello Vue3!' // 赋值操作
 ```
 
 <arrow v-click="[1, 2]" x1="330" y1="170" x2="630" y2="280" color="#564" width="3" arrowSize="1" />
-<img v-click="[1, 2]" alt="桶占位" />
-<img v-click="[2, 3]" alt="桶占位" />
+<arrow v-click="[2, 3]" x1="230" y1="230" x2="630" y2="280" color="#564" width="3" arrowSize="1" />
+<img 
+  v-click="[1,3]" 
+  src="public/bucket.excalidraw.png" 
+  alt="桶占位" 
+  style="margin-left: 600px; height: 300px"
+/>
 
 ---
 ---
@@ -407,13 +410,14 @@ WeakMap<target, Map<key, Set<effectFn>>>
 ```
 
 <img 
-  src="public/1.excalidraw.png"
+  src="public/data-structure.excalidraw.png"
   alt="the-structure-of-reactivity-data-and-effect-fn"
 />
 
 ---
 
 最后，再将代码封装一下：
+
 ```js
 const obj = reactive(data)
 
@@ -436,7 +440,7 @@ function track(target, prop) {/* ... */}
 function trigger(target, prop) {/* ... */}
 ```
 
-`demo: 04-design-a-full-reactivity-system.html`
+demo: `04-design-a-full-reactivity-system.html`
 
 ---
 ---
@@ -564,7 +568,8 @@ function effect(fn) {
   activeEffect = effectStack[effectStack.length - 1]
 }
 ```
-demo: 06-nested-effect.html
+
+demo: `06-nested-effect.html`
 
 ---
 
@@ -629,7 +634,7 @@ function effect(fn, options = {}) {
 }
 ```
 
-```js {2-9}
+```js
 function trigger(target, prop) {
   effects.forEach(effectFn => {
     if (effectFn.options.schedular) {
@@ -663,7 +668,8 @@ console.log('结束了')
 '结束了'
 2
 ```
-demo: 07-schedular.html
+
+`demo: 07-schedular.html`
 
 ---
 
@@ -753,7 +759,7 @@ function computed(getter) {
 
 测试一下代码:
 
-demo: 08-computed.html
+demo: `08-computed.html`
 
 ```js
 const data = { a: 1, b: 2 }
@@ -833,7 +839,8 @@ computed(obj)
       └── effectFn
 `
 ```
-demo: 09-computed-2.html
+
+demo: `09-computed-2.html`
 
 ---
 
@@ -872,7 +879,7 @@ obj.a = 100 // 修改
 
 <div grid="~ cols-2 gap-4">
 
-第二版: (demo: 11-watch-2.html)
+第二版: (demo: `11-watch-2.html`)
 
 ```js
 function watch(source, cb) {
@@ -979,7 +986,7 @@ const obj = reactive(wrapper) // 使用 reactive 将其转为响应式数据
 ```
 再封装成 ref 函数:
 ```js
-// demo: 14.ref.html
+// demo: 14-ref.html
 function ref(val) {
   const wrapper = {
     value: val
@@ -1118,7 +1125,7 @@ function toRefs(obj) {
 测试一下:
 
 ```js
-// demo: 15.ref-2.html
+// demo: 15-ref-2.html
 const newObj = { ...toRefs(obj) }
 effect(() => {
   console.log(newObj.foo.value)
@@ -1247,7 +1254,7 @@ const ast = {
 {
   type: 'Interpolation',
   content: {
-    type: 'Expression',
+    type: 'SimpleExpression',
     content: String,
   },
 }
@@ -1583,6 +1590,7 @@ function createTransformContext(
 ```
 
 ```js
+// 插拔式的插件预设
 {
   nodeTransforms: [
     transformElement,
@@ -1726,6 +1734,55 @@ function processExpression(node) {
 ---
 
 ## codegen 代码生成
+
+上文实现了 `transform`，接下来进入 `compile` 最后的 `codegen` 阶段。
+
+### 一些准备工作
+
+`codegen` 阶段会根据 `AST` 生成 `render` 函数的代码字符串，而渲染函数的执行会生成虚拟 DOM。
+
+假设模板如下:
+
+```js
+<div>{{ msg }}</div>
+```
+经过 codegen 代码生成后，会生成如下代码:
+```js
+`
+function render(_ctx) {
+  return h('div', null, _toDisplayString(_ctx.msg))
+}
+`
+```
+
+---
+
+我们看到，代码字符串中有 `h` 函数，`h` 函数实际上就是对 `createVNode` 的封装，它们都是用于创建 `VNode` 的。
+
+```js
+// 源码位置: packages/runtime-core/src/h.ts
+function h(tag, props, children) {
+  // 我们这里就简单的返回一个对象，实际源码中会复杂很多
+  return {
+    tag,
+    props,
+    children,
+  }
+}
+```
+
+`_toDisplayString` 函数是 `toDisplayString` 的别名，它用于将插值表达式转换为字符串:
+
+```js
+const toDisplayString = (val) => {
+  return String(val)
+}
+```
+
+---
+
+### 代码实现
+
 
 `codegen` 主入口函数:
 
