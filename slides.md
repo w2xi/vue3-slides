@@ -189,7 +189,7 @@ obj.text = 'Hello Vue3!' // 赋值操作
 <arrow v-click="[2, 3]" x1="230" y1="230" x2="630" y2="280" color="#564" width="3" arrowSize="1" />
 <img 
   v-click="[1,3]" 
-  src="public/bucket.excalidraw.png" 
+  src="/public/bucket.excalidraw.png" 
   alt="桶占位" 
   style="margin-left: 600px; height: 300px"
 />
@@ -410,7 +410,7 @@ WeakMap<target, Map<key, Set<effectFn>>>
 ```
 
 <img 
-  src="public/data-structure.excalidraw.png"
+  src="/public/data-structure.excalidraw.png"
   alt="the-structure-of-reactivity-data-and-effect-fn"
 />
 
@@ -1146,7 +1146,7 @@ layout: center
 
 首先来看看完整的编译流程:
 
-![compile](public/compile-process.excalidraw.png)
+![compile](/public/compile-process.excalidraw.png)
 
 用代码可以这样表示:
 
@@ -1160,7 +1160,7 @@ const render = new Function(code) // 渲染函数
 
 ---
 
-![template-to-render](public/template-to-render.excalidraw.png)
+![template-to-render](/public/template-to-render.excalidraw.png)
 
 编译器的最终目的就是将**模板转换成渲染函数**，而渲染函数的执行会生成虚拟DOM，用于后续的挂载和更新。
 
@@ -2206,7 +2206,7 @@ createApp({
 
 ---
 layout: image
-image: public/mikoto-misaka.jpg
+image: /public/mikoto-misaka.jpg
 ---
 
 <style>
