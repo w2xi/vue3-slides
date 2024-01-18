@@ -1137,7 +1137,75 @@ obj.foo = 10 // 修改可以触发执行
 ```
 
 ---
+
+## 自动脱 ref
+
+在 Vue.js 中，如下面代码所示:
+
+```vue
+<template>{{ msg }}</template>
+
+<script>
+export default {
+  setup() {
+    const msg = ref('hello')
+    return { msg }
+  }
+}
+</script>
+```
+
+可以看到，我们不需要在模板中使用 `{{ msg.value }}` 来获取属性值，而是直接使用 `{{ msg }}`，这是怎么实现的呢?
+
+---
+
+我们知道，在 `setup()` 函数中会返回所有的响应式数据，那么是不是可以对返回值做一个代理，当访问 `ref` 数据时自动脱 ref 呢?
+
+```vue
+<script>
+export default {
+  setup() {
+    const obj = reactive({ foo: 1, bar: 2 })
+    const msg = ref('hello')
+
+    return proxyRefs({
+      msg,
+      ...toRefs(obj)
+    })
+  }
+}
+<script>
+```
+
+接下来，看看 `proxyRefs` 函数是如何实现的。
+
+---
+
+> 前文中，如果使用的是 `ref()` 定义的响应式数据，那么其内部会创建一个 `__v_isRef` 属性，用来标识当前数据是一个 `ref` 类型的数据。
+
+```js
+// demo: 16-proxyRefs.html
+function proxyRefs(obj) {
+  return new Proxy(obj, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      return value.__v_isRef ? value.value : value
+    },
+    set(target, prop, newVal, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      if (value.__v_isRef) {
+        value.value = newVal
+        return true
+      }
+      return Reflect.set(target, prop, newVal, receiver)
+    }
+  })
+}
+```
+
+---
 layout: center
+transition: fade-out
 ---
 
 # 编译器初探

@@ -101,13 +101,32 @@ function toRefs(obj) {
   return result
 }
 
-const obj = reactive({ foo: 1, bar: 2 })
-const newObj = { ...toRefs(obj) }
-effect(() => {
-  console.log(newObj.foo.value)
-})
+function proxyRefs(obj) {
+  return new Proxy(obj, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      return value.__v_isRef ? value.value : value
+    },
+    set(target, prop, newVal, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      if (value.__v_isRef) {
+        value.value = newVal
+        return true
+      }
+      return Reflect.set(target, prop, newVal, receiver)
+    }
+  })
+}
 
-obj.foo = 10 // 会触发副作用函数重新执行
-// or
-// newObj.foo.value = 10
+const obj = reactive({ foo: 1, bar: 2 })
+const msg = ref('hello')
+const setupResult = {
+  msg,
+  ...toRefs(obj)
+}
+const p = proxyRefs(setupResult)
+
+console.log(p.msg) // hello
+console.log(p.foo) // 1
+console.log(p.bar) // 2
 </script>

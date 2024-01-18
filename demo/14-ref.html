@@ -73,6 +73,10 @@ function ref(val) {
   const wrapper = {
     value: val
   }
+  // 定义不可枚举的属性 __v_isRef
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
   return reactive(wrapper)
 }
 const obj = ref(1)
