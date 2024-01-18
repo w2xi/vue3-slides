@@ -657,13 +657,13 @@
 
   const NodeTypes = {
     // AST
-    ROOT: 'ROOT',
-    ELEMENT: 'ELEMENT',
-    TEXT: 'TEXT',
-    SIMPLE_EXPRESSION: 'SIMPLE_EXPRESSION',
-    INTERPOLATION: 'INTERPOLATION',
-    ATTRIBUTE: 'ATTRIBUTE',
-    DIRECTIVE: 'DIRECTIVE',
+    ROOT: 'Root',
+    ELEMENT: 'Element',
+    TEXT: 'Text',
+    SIMPLE_EXPRESSION: 'Simple_Expression',
+    INTERPOLATION: 'Interpolation',
+    ATTRIBUTE: 'Attribute',
+    DIRECTIVE: 'Directive',
   };
 
   function createVNodeCall(type, tag, props, children) {
@@ -732,7 +732,75 @@
       nodes.push(node);
     }
 
-    return nodes
+    /**
+     * 举例:
+     * const template = `
+     *    <div>
+     *      <p>Template</p>
+     *    </div>
+     * `
+     * => ast
+     * {
+          "type": "Root",
+          "children": [
+            { "type": "Text", "content": "\n  "},
+            {
+              "type": "Element",
+              "tag": "div",
+              "props": [],
+              "children": [
+                { "type": "Text", "content": "\n    " },
+                {
+                  "type": "Element",
+                  "tag": "p",
+                  "props": [],
+                  "children": [
+                    { "type": "Text", "content": "Template" }
+                  ]
+                },
+                { "type": "Text", "content": "\n  " }
+              ]
+            },
+            { "type": "Text", "content": "\n" }
+          ]
+        }
+     * 
+     */
+
+    // whitespace handling strategy
+    let removeWhitespace = false; // 标记是否需要移除节点
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.type === NodeTypes.TEXT) {
+        // 如果是文本节点
+        if (!/[^\t\r\n\f ]/.test(node.content)) {
+          // 匹配 `\t\r\n\f `
+          const prev = nodes[i - 1];
+          const next = nodes[i + 1];
+
+          if (
+            !prev ||
+            !next ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
+              /[\r\n]/.test(node.content))
+          ) {
+            // 处理第一个 或 最后一个 或 连续多个 或 夹在中间的空白符文本节点
+
+            removeWhitespace = true;
+            nodes[i] = null;
+          } else {
+            node.content = ' ';
+          }
+        } else {
+          // 将多个空格，换行等 替换为一个空字符串
+          // 比如: `   abc   ` => ' abc '
+          node.content = node.content.replace(/[\t\r\f\n ]+/g, ' ');
+        }
+      }
+    }
+
+    return removeWhitespace ? nodes.filter(Boolean) : nodes;
   }
 
   /**
@@ -1122,7 +1190,7 @@
 
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      if (typeof node === 'string') {
+      if (isString(node)) {
         push(`'${node}'`);
       } else {
         genNode(node, context);
@@ -1345,14 +1413,6 @@
     return render
   }
 
-  function h(tag, props, children) {
-    return {
-        tag,
-        props,
-        children,
-    }
-  }
-
   function createApp(options = {}) {
     const app = {
       mount(container) {
@@ -1407,6 +1467,14 @@
     container.appendChild(el);
   }
 
+  function h(tag, props, children) {
+    return {
+      tag,
+      props,
+      children,
+    }
+  }
+
   const toDisplayString = (val) => {
     return String(val)
   };
@@ -1416,7 +1484,9 @@
   exports.computed = computed;
   exports.createApp = createApp;
   exports.effect = effect;
+  exports.generate = generate;
   exports.h = h;
+  exports.parse = parse;
   exports.proxyRefs = proxyRefs;
   exports.reactive = reactive;
   exports.readonly = readonly;
