@@ -29,24 +29,30 @@ by 夏影
 <div>
 
 - 响应式系统
+  + 引子: 什么是响应式?
+  + 如何实现响应式数据?
   + 副作用函数 effect
-  + reactive
-  + ref
-  + computed
-  + watch
+  + reactive 非原始值的响应式方案
+  + ref 原始值的响应式方案
+  + computed 的实现原理
+  + watch 的实现原理
+  + 响应式丢失问题
   + 自动脱 ref
-
-- 编译器
-  + 解析器 parser
-  + 转换器 transform
-  + 代码生成 generate
 
 </div>
 
 <div>
 
-- Demo
-  + 计数器 Counter
+- 编译器
+  + 抽象语法树 AST
+  + 模板解析 parse
+  + 转换器 transform
+  + 代码生成 codegen
+  + 编译 compile
+
++ 挂载&更新
+
++ demo: 计数器 Counter
 
 </div>
 
@@ -63,7 +69,7 @@ transition: fade-out
 layout: default
 ---
 
-## 什么是响应式？
+## 引子: 什么是响应式？
 
 考虑下面的代码:
 
@@ -906,7 +912,7 @@ function watch(source, cb) {
 
 ---
 
-## 非原始的值影响是方案: reactive
+## reactive: 非原始值的响应式方案
 
 实际上之前对拦截器代码的封装，我们已经实现了 `reactive`。
 
@@ -971,7 +977,7 @@ obj.info.foo = 'aaa'
 
 ---
 
-## 原始值的响应式方案: ref
+## ref: 原始值的响应式方案
 
 对于原始数据类型，`number, string...`，JS 底层没有提供任何拦截的方式，JS 只能拦截对象类型的数据。
 
@@ -1161,7 +1167,7 @@ export default {
 
 我们知道，在 `setup()` 函数中会返回所有的响应式数据，那么是不是可以对返回值做一个代理，当访问 `ref` 数据时自动脱 ref 呢?
 
-```vue
+```js
 <script>
 export default {
   setup() {
@@ -1601,7 +1607,7 @@ console.log(JSON.stringify(ast, null, 2))
 
 ---
 
-## transform 转换器
+## 转换器 transform
 
 前面已经实现了 解析器(parser) —— 将模板字符串解析为 AST 语法树，接下来需要实现 transform 转换器，进一步处理模板 AST，为后期的代码生成做准备。
 
@@ -1801,7 +1807,7 @@ function processExpression(node) {
 
 ---
 
-## codegen 代码生成
+## 代码生成 codegen
 
 上文实现了 `transform`，接下来进入 `compile` 最后的 `codegen` 阶段。
 
