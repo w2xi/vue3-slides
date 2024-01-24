@@ -2,6 +2,9 @@
 .red {
     color: red;
 }
+li {
+    cursor: pointer;
+}
 </style>
 <body></body>
 <script>
@@ -11,7 +14,7 @@ function h(tag, props, children) {
         props,
         children,
     }
-}
+} 
 
 function render() {
     return h('ul', {

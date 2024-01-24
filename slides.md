@@ -2165,7 +2165,104 @@ function compileToFunction(template) {
 
 ## 挂载&更新
 
-前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载和更新** (这里不涉及 patch)。
+前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，已经有能力将模板编译成渲染函数了，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载和更新** (这里不涉及 patch)。
+
+过程如下图所示:
+
+<img src="/public/vnode-to-dom.excalidraw.png" />
+
+---
+
+对于下面的模板:
+
+```html
+<ul class="red">
+  <li>Vue</li>
+  <li>React</li>
+  <li>Angular</li>
+</ul>
+```
+
+经过编译后，其对应的渲染函数和VNode分别如下:
+
+<div grid="~ cols-2 gap-2">
+
+```js
+function render() {
+  return h('ul', {
+      class: 'red',
+      onClick() {
+        console.log('click')
+      }
+    }, 
+    [ 
+      h('li', null, 'Vue'), 
+      h('li', null, 'React'), 
+      h('li', null, 'Angular') 
+    ]
+  )
+}
+```
+
+```js
+// VNode
+{
+  tag: 'ul',
+  props: {
+    class: 'red',
+    onClick() {
+        console.log('click')
+    }
+  },
+  children: [
+    { tag: 'li', children: 'Vue' },
+    { tag: 'li', children: 'React' },
+    { tag: 'li', children: 'Angular' },
+  ]
+}
+```
+
+</div>
+
+---
+
+渲染函数的执行会生成虚拟 DOM，接下来我们尝试手动将虚拟 DOM 渲染到页面上。
+
+<div grid="~ cols-2 gap-2">
+
+```js
+function mount(vnode, container) {
+  const el = document.createElement(vnode.tag)
+  if (vnode.props) {
+    for (let key in vnode.props) {
+      if (key.startsWith('on')) { // 处理事件绑定
+        const eventName = key.slice(2).toLowerCase()
+        el.addEventListener(eventName, vnode.props[key])
+      } else {
+        el.setAttribute(key, vnode.props[key])
+      }
+    }
+  }
+  if (Array.isArray(vnode.children)) {
+    vnode.children.forEach(child => {
+      mount(child, el)
+    })
+  } else {
+    el.textContent = vnode.children
+  }
+  container.appendChild(el)
+}
+```
+
+```js
+// demo: 22-manually-mount.html
+
+const vnode = render()
+console.log(vnode);
+mount(vnode, document.body)
+```
+
+</div>
 
 ---
 
