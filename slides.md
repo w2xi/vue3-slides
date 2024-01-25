@@ -2183,9 +2183,7 @@ function compileToFunction(template) {
 </ul>
 ```
 
-经过编译后，其对应的渲染函数和VNode分别如下:
-
-<div grid="~ cols-2 gap-2">
+经过编译后，其对应的渲染函数如下:
 
 ```js
 function render() {
@@ -2203,6 +2201,16 @@ function render() {
   )
 }
 ```
+
+---
+
+执行渲染函数:
+
+```js
+render()
+```
+
+会生成下面的 **虚拟DOM**:
 
 ```js
 // VNode
@@ -2222,15 +2230,14 @@ function render() {
 }
 ```
 
-</div>
-
 ---
 
-渲染函数的执行会生成虚拟 DOM，接下来我们尝试手动将虚拟 DOM 渲染到页面上。
+有了虚拟DOM，现在我们尝试手动将其渲染到页面中去。
 
 <div grid="~ cols-2 gap-2">
 
 ```js
+// 挂载
 function mount(vnode, container) {
   const el = document.createElement(vnode.tag)
   if (vnode.props) {
@@ -2247,7 +2254,7 @@ function mount(vnode, container) {
     vnode.children.forEach(child => {
       mount(child, el)
     })
-  } else {
+  } else { // text node
     el.textContent = vnode.children
   }
   container.appendChild(el)
@@ -2266,7 +2273,18 @@ mount(vnode, document.body)
 
 ---
 
+前文中，我们已经实现了**挂载**，现在我们将代码封装一下，并实现自动**更新**的功能。
+
 <div grid="~ cols-2 gap-2">
+
+```js
+// 挂载
+let _mount = mount
+
+function mount(vnode, container) {
+  // ...
+}
+```
 
 ```js
 function createApp(options = {}) {
@@ -2280,48 +2298,17 @@ function createApp(options = {}) {
       const setupFn = options.setup || noop
       const setupResult = setupFn() || {}
       const data = proxyRefs(setupResult)
-
       const reload = () => {
-        const vnode = render(data, { h, _toDisplayString: function toString(val) { return val && val.toString() } })
+        const vnode = render(data)
         container.innerHTML = ''
         _mount(vnode, container)
       }
-      // 副作用函数
       effect(() => {
         reload()
       })
     }
   }
   return app
-}
-```
-
-```js
-// 挂载
-function _mount(vnode, container) {
-  const el = document.createElement(vnode.tag)
-  if (vnode.props) {
-      for (let key in vnode.props) {
-          if (key.startsWith('on')) { // 事件绑定
-              const eventName = key.slice(2).toLowerCase()
-              el.addEventListener(eventName, vnode.props[key])
-          } else {
-              el.setAttribute(key, vnode.props[key])
-          }
-      }
-  }
-  if (Array.isArray(vnode.children)) {
-    if (vnode.children.length === 1 && typeof vnode.children[0] != 'object') {
-      el.textContent = vnode.children[0]
-    } else {
-      vnode.children.forEach(child => {
-          _mount(child, el)
-      })
-    }
-  } else { // string
-      el.textContent = vnode.children
-  }
-  container.appendChild(el)
 }
 ```
 
@@ -2335,7 +2322,7 @@ function _mount(vnode, container) {
 
 ---
 
-## counter 计数器 demo
+## Counter 计数器 demo
 
 demo: `22-counter.html`
 

@@ -1422,7 +1422,7 @@
         const template = container.innerHTML;
         const render = compileToFunction(template);
         const setupFn = options.setup || noop;
-        const data = proxyRefs(setupFn());
+        const data = proxyRefs(setupFn()); 
 
         const reload = () => {
           const vnode = render(data);      
