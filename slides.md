@@ -2265,7 +2265,7 @@ function mount(vnode, container) {
 // demo: 22-manually-mount.html
 
 const vnode = render()
-console.log(vnode);
+console.log('VNode: ', vnode);
 mount(vnode, document.body)
 ```
 
@@ -2322,7 +2322,7 @@ function createApp(options = {}) {
 
 ---
 
-## Counter 计数器 demo
+## Counter 计数器
 
 demo: `22-counter.html`
 
@@ -2361,6 +2361,32 @@ createApp({
 ```
 
 </div>
+
+---
+
+## 手写 render 函数
+
+我们知道，在 Vue.js 中，可以手写 `render` 渲染函数，接下里我们也来支持下。
+
+```js
+// demo: 24-render-function-options.html
+
+function createApp(options = {}) {
+  const app = {
+    mount(container) {
+      // ...
+      let render
+      if (isFunction(options.render)) { // 传入 render 函数
+        render = options.render
+      } else {
+        render = compileToFunction(template)
+      }
+      // ...
+    }
+  }
+  return app
+}
+```
 
 ---
 layout: image

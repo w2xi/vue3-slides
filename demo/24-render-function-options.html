@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A counter</title>
+  <title>render function options</title>
   <script src="./static/mini-vue.umd.js"></script>
   <style>
     .demo {
@@ -18,17 +18,9 @@
   </style>
 </head>
 <body>
-  <div id="app">
-    <div class="demo">
-      <button @click="minus">-1</button>
-      <span class="count">{{ count }}</span>
-      <button @click="plus">+1</button>
-    </div>
-  </div>
-  
+  <div id="app"></div>
   <script>
-    console.log('MiniVue:', MiniVue)
-    const { createApp, ref } = MiniVue
+    const { createApp, ref, h } = MiniVue
     const count = ref(0)
 
     createApp({
@@ -44,6 +36,14 @@
           plus,
           minus
         }
+      },
+      render(props) {
+        const { count, plus, minus } = props
+        return h('div', { class: 'demo'}, [
+            h('button', { onClick() { minus() } }, '-1'),
+            h('span', { class: 'count' }, count),
+            h('button', { onClick() { plus() } }, '+1')
+        ])
       }
     }).mount('#app')
   </script>
