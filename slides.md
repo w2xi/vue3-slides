@@ -1869,6 +1869,7 @@ function generate(ast) {
   genCode(ast.codegenNode, context)
 
   return {
+    ast,
     code: context.code // 渲染函数代码字符串
   }
 }
@@ -2139,8 +2140,8 @@ function baseCompile(template) {
       ]
     }
   )
-  const code = generate(ast)
-  return code
+  
+  return generate(ast)
 }
 ```
 
@@ -2155,7 +2156,11 @@ function baseCompile(template) {
 function compileToFunction(template) {
   const { code } = baseCompile(template)
   const render = new Function(code)()
-  return render
+
+  return {
+    code,
+    render,
+  }
 }
 ```
 
@@ -2294,7 +2299,7 @@ function createApp(options = {}) {
         container = document.querySelector(container)
       }
       const template = container.innerHTML
-      const render = compileToFunction(template)
+      const { render } = compileToFunction(template)
       const setupFn = options.setup || noop
       const setupResult = setupFn() || {}
       const data = proxyRefs(setupResult)
@@ -2379,7 +2384,7 @@ function createApp(options = {}) {
       if (isFunction(options.render)) { // 传入 render 函数
         render = options.render
       } else {
-        render = compileToFunction(template)
+        ({ render } = compileToFunction(template))
       }
       // ...
       const reload = () => {
@@ -2432,6 +2437,24 @@ createApp({
 ```
 
 </div>
+
+---
+
+## 关于编译优化
+
+我这里其实没做任何的优化，只是把主体逻辑走通了，让代码可以跑起来，而且还有很多功能都没去实现，比如指令的处理，组件的支持等等。
+
+实际上在编译阶段，Vue3 内部是做了很多优化处理的，比如:
+
+- 动态节点标记 patchFlag，为后续的 diff 做准备
+- 静态提升
+- 事件缓存
+- ...
+
+
+关于编译优化，可以看看 Vue3 提供的一个模板解析工具大致了解下。
+
+[Vue3 Template Explorer](https://template-explorer.vuejs.org/)
 
 ---
 layout: image

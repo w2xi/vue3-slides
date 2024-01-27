@@ -11,9 +11,10 @@ const template = `
   <p>Template</p>
 </div>
 `
-const render = compileToFunction(template)
+const { code, render } = compileToFunction(template)
 
-console.log('模板:', template)
-console.log('渲染函数:', render)
+console.log('模板:\n', template)
+console.log('渲染函数代码字符串:\n', code)
+console.log('渲染函数:\n', render)
 </script>
 

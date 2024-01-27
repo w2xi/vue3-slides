@@ -1022,6 +1022,7 @@
     genCode(ast.codegenNode, context);
 
     return {
+      ast,
       code: context.code // 渲染函数代码
     }
   }
@@ -1410,10 +1411,8 @@
         ]
       }
     );
-    // 生成渲染函数字符串 ( `return function render() {/*...*/}` )
-    const code = generate(ast);
-
-    return code
+    
+    return generate(ast)
   }
 
   /**
@@ -1424,7 +1423,11 @@
   function compileToFunction(template) {
     const { code } = baseCompile(template);
     const render = new Function(code)();
-    return render
+
+    return {
+      code,
+      render,
+    }
   }
 
   function createApp(options = {}) {
@@ -1438,7 +1441,7 @@
         if (isFunction(options.render)) { // 用户自定义渲染函数
           render = options.render;
         } else {
-          render = compileToFunction(template);
+          ({ render } = compileToFunction(template));
         }
         const setupFn = options.setup || noop;
         const data = proxyRefs(setupFn());
