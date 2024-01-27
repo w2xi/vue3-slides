@@ -1146,7 +1146,7 @@ obj.foo = 10 // 修改可以触发执行
 
 ## 自动脱 ref
 
-在 Vue.js 中，如下面代码所示:
+在 Vue.js 中，有下面代码:
 
 ```vue
 <template>{{ msg }}</template>
@@ -1161,11 +1161,13 @@ export default {
 </script>
 ```
 
-可以看到，我们不需要在模板中使用 `{{ msg.value }}` 来获取属性值，而是直接使用 `{{ msg }}`，这是怎么实现的呢?
+可以看到，我们不需要在模板中使用 `{{ msg.value }}` 来获取属性值，而是直接使用了 `{{ msg }}`，我们不禁好奇，这是怎么实现的？
 
 ---
 
-我们知道，在 `setup()` 函数中会返回所有的响应式数据，那么是不是可以对返回值做一个代理，当访问 `ref` 数据时自动脱 ref 呢?
+我们知道，在 `setup()` 函数中会统一返回所有的响应式数据，那么是不是可以对返回的数据做一个代理，当访问 `ref` 数据时自动脱 ref 呢?
+
+> **自动脱 ref**: 比如，在模板中访问 `{{ msg }}` (ref)，通过代理拦截，判断如果是一个 `ref`，那么就访问 `msg.value`
 
 ```js
 <script>
@@ -1364,11 +1366,14 @@ const NodeTypes = {
 
 --- 
 
-## 模板解析器 parser
+## 模板解析 parse
 
 模板是如何被解析成 AST 的呢？
 
 ```js
+/**
+ * @params {String} str 模板字符串
+ */
 function parse(str) {
   /* ... */
 }
@@ -1834,7 +1839,8 @@ function render(_ctx) {
 我们看到，代码字符串中有 `h` 函数，`h` 函数实际上就是对 `createVNode` 的封装，它们都是用于创建 `VNode` 的。
 
 ```js
-// 源码位置: packages/runtime-core/src/h.ts
+// packages/runtime-core/src/h.ts
+
 function h(tag, props, children) {
   // 我们这里就简单的返回一个对象，实际源码中会复杂很多
   return {
@@ -1848,6 +1854,8 @@ function h(tag, props, children) {
 `_toDisplayString` 函数是 `toDisplayString` 的别名，它用于将插值表达式转换为字符串:
 
 ```js
+// packages/shared/src/toDisplayString.ts
+
 const toDisplayString = (val) => {
   return String(val)
 }
@@ -2168,6 +2176,24 @@ function compileToFunction(template) {
 
 ---
 
+## 关于编译优化
+
+我这里其实没做任何的优化，只是把主体逻辑走通了，让代码可以跑起来，而且还有很多功能都没去实现，比如指令的处理，组件的支持等等。
+
+实际上在编译阶段，Vue3 内部是做了很多优化处理的，比如:
+
+- 动态节点标记 patchFlag，为后续的 diff 做准备
+- 静态提升
+- 事件缓存
+- ...
+
+
+关于编译优化，可以看看 Vue3 提供的一个模板解析工具大致了解下。
+
+[Vue3 Template Explorer](https://template-explorer.vuejs.org/)
+
+---
+
 ## 挂载&更新
 
 前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，已经有能力将模板编译成渲染函数了，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载和更新** (这里不涉及 patch)。
@@ -2437,24 +2463,6 @@ createApp({
 ```
 
 </div>
-
----
-
-## 关于编译优化
-
-我这里其实没做任何的优化，只是把主体逻辑走通了，让代码可以跑起来，而且还有很多功能都没去实现，比如指令的处理，组件的支持等等。
-
-实际上在编译阶段，Vue3 内部是做了很多优化处理的，比如:
-
-- 动态节点标记 patchFlag，为后续的 diff 做准备
-- 静态提升
-- 事件缓存
-- ...
-
-
-关于编译优化，可以看看 Vue3 提供的一个模板解析工具大致了解下。
-
-[Vue3 Template Explorer](https://template-explorer.vuejs.org/)
 
 ---
 layout: image
