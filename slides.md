@@ -2219,7 +2219,7 @@ render()
   props: {
     class: 'red',
     onClick() {
-        console.log('click')
+      console.log('click')
     }
   },
   children: [
@@ -2339,12 +2339,13 @@ demo: `22-counter.html`
 </div>
 ```
 
-```js
+```html
+<script>
 const { createApp, ref } = MiniVue
-const count = ref(0)
 
 createApp({
   setup() {
+    const count = ref(0)
     const plus = () => {
       count.value++
     }
@@ -2358,6 +2359,7 @@ createApp({
     }
   }
 }).mount('#app')
+<script>
 ```
 
 </div>
@@ -2366,11 +2368,9 @@ createApp({
 
 ## 手写 render 函数
 
-我们知道，在 Vue.js 中，可以手写 `render` 渲染函数，我们也来支持下。
+我们知道，Vue.js 支持 `render` 渲染函数选项，相比较模板，这种方式更加灵活，现在我们也来支持下。
 
 ```js
-// demo: 24-render-function-options.html
-
 function createApp(options = {}) {
   const app = {
     mount(container) {
@@ -2382,11 +2382,56 @@ function createApp(options = {}) {
         render = compileToFunction(template)
       }
       // ...
+      const reload = () => {
+        const vnode = render(data)
+        // ...
+      }
+      effect(() => reload())
     }
   }
   return app
 }
 ```
+
+---
+
+支持了 `render` 渲染函数选项，现在我们使用 `render` 来重写下前面的 Counter 计数器 demo:
+
+<div grid="~ cols-2 gap-2">
+
+```html
+<script src="./static/mini-vue.umd.js"></script>
+<div id="app"></div>
+```
+
+```html
+<script>
+// demo: 24-render-function-options.html
+const { createApp, ref, h } = MiniVue
+createApp({
+  setup() {
+    const count = ref(0)
+    const plus = () => count.value++
+    const minus = () => count.value--
+    return {
+      count,
+      plus,
+      minus
+    }
+  },
+  render(props) {
+    const { count, plus, minus } = props
+    return h('div', { class: 'demo'}, [
+      h('button', { onClick() { minus() } }, '-1'),
+      h('span', { class: 'count' }, count),
+      h('button', { onClick() { plus() } }, '+1')
+    ])
+  }
+}).mount('#app')
+</script>
+```
+
+</div>
 
 ---
 layout: image

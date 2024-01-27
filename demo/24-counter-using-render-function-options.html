@@ -21,10 +21,10 @@
   <div id="app"></div>
   <script>
     const { createApp, ref, h } = MiniVue
-    const count = ref(0)
-
+    
     createApp({
       setup() {
+        const count = ref(0)
         const plus = () => {
           count.value++
         }

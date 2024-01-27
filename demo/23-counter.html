@@ -29,10 +29,10 @@
   <script>
     console.log('MiniVue:', MiniVue)
     const { createApp, ref } = MiniVue
-    const count = ref(0)
-
+    
     createApp({
       setup() {
+        const count = ref(0)
         const plus = () => {
           count.value++
         }
