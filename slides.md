@@ -2453,9 +2453,9 @@ createApp({
   render(props) {
     const { count, plus, minus } = props
     return h('div', { class: 'demo'}, [
-      h('button', { onClick() { minus() } }, '-1'),
+      h('button', { onClick: minus }, '-1'),
       h('span', { class: 'count' }, count),
-      h('button', { onClick() { plus() } }, '+1')
+      h('button', { onClick: plus }, '+1')
     ])
   }
 }).mount('#app')

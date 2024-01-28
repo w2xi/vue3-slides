@@ -1430,6 +1430,79 @@
     }
   }
 
+  /**
+   * @param {*} n1 old vnode
+   * @param {*} n2 new vnode
+   * @returns 
+   */
+  function patch(n1, n2) {
+    // there are lots of assumption and only handle simpler cases
+
+    // patch tag
+    if (n1.tag === n2.tag) {
+      const el = n2.el = n1.el;
+      // patch props
+      const oldProps = n1.props || {};
+      const nweProps = n2.props || {};
+      for (const key in nweProps) {
+        const oldValue = oldProps[key];
+        const newValue = nweProps[key];
+        if (oldValue !== newValue) {
+          el.setAttribute(key, newValue);
+        }
+      }
+      // patch children
+      const oldChildren = n1.children;
+      const newChildren = n2.children;
+      if (typeof newChildren === 'string') {
+        if (typeof oldChildren === 'string') {
+          if (newChildren !== oldChildren) {
+            el.textContent = newChildren;
+          }
+        } else { 
+          // oldChildren is a array, but we can just override it
+          el.textContent = newChildren;
+        }
+      } else {
+        if (typeof oldChildren === 'string') {
+          // discard oldChildren
+          el.innerHTML = '';
+          // mount newChildren
+          newChildren.forEach(child => {
+            mount(child, el);
+          });
+        } else {
+          // both old and new is a array
+
+          const commonLength = Math.min(oldChildren.length, newChildren.length);
+          for (let i = 0; i < commonLength; i++) {
+            patch(oldChildren[i], newChildren[i]);
+          }
+          if (newChildren.length > oldChildren.length) {
+            // to new node, just mount it 
+            newChildren.slice(oldChildren.length).forEach(child => {
+              mount(child, el);
+            });
+          } else if (newChildren.length < oldChildren.length) {
+            oldChildren.slice(newChildren.length).forEach(child => {
+              // unmount old el
+              el.removeChild(child.el);
+            });
+          }
+        }
+      }
+    } else {
+      // ... replace
+    
+      // unmount old dom
+      n1.parent.removeChild(n1.el);
+      // mount new dom
+      mount(n2, n1.parent);
+    }
+
+    return n1.el
+  }
+
   function createApp(options = {}) {
     const app = {
       mount(container) {
@@ -1446,10 +1519,16 @@
         const setupFn = options.setup || noop;
         const data = proxyRefs(setupFn());
 
+        let oldVNode;
         const reload = () => {
-          const vnode = render(data);      
-          container.innerHTML = '';
-          _mount(vnode, container);
+          const vnode = render(data);
+          if (oldVNode) {
+            vnode.el = patch(oldVNode, vnode);
+          } else {
+            container.innerHTML = '';
+            _mount(vnode, container);
+          }
+          oldVNode = vnode;
         };
 
         effect(() => {
@@ -1462,26 +1541,28 @@
   }
 
   function _mount(vnode, container) {
-    const el = document.createElement(vnode.tag);
-
+    const el = vnode.el = document.createElement(vnode.tag);
+    // handle props
     if (vnode.props) {
-        for (let key in vnode.props) {
-            if (key.startsWith('on')) { // 事件绑定
-                const eventName = key.slice(2).toLowerCase();
-                el.addEventListener(eventName, vnode.props[key]);
-            } else {
-                el.setAttribute(key, vnode.props[key]);
-            }
+      for (let key in vnode.props) {
+          if (key.startsWith('on')) { // 事件绑定
+          const eventName = key.slice(2).toLowerCase();
+          el.addEventListener(eventName, vnode.props[key]);
+        } else {
+          el.setAttribute(key, vnode.props[key]);
         }
+      }
     }
-    if (Array.isArray(vnode.children)) {
-      vnode.children.forEach(child => {
+    // handle children
+    if (vnode.children) {
+      if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
           _mount(child, el);
-      });
-    } else { // text node
+        });
+      } else { // text node
         el.textContent = vnode.children;
+      }
     }
-
     container.appendChild(el);
   }
 
