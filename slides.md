@@ -2205,9 +2205,9 @@ transition: fade-out
 
 前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，已经有能力将模板编译成渲染函数了，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载**。
 
-过程如下图所示:
+如下图所示:
 
-<img src="/public/vnode-to-dom.excalidraw.png" />
+<img src="/public/mount.excalidraw.png" />
 
 ---
 
@@ -2408,6 +2408,10 @@ createApp({
 运行 demo，点击 `+1` 按钮，查看 DevTools 的 Elements，发现每次都是全量更新。
 
 接下来我们来简单优化下，实现一个简单的 `patch` 函数，用来对比新旧节点，只更新需要更新的部分。
+
+如下图所示:
+
+<img src="/public/patch.excalidraw.png" />
 
 ---
 
