@@ -1,0 +1,94 @@
+<style>
+  .demo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .count {
+    margin: 0 15px;
+  }
+</style>
+
+<body>
+  <div id="app">
+    <div class="demo">
+      <button @click="minus">-1</button>
+      <span class="count">{{ count }}</span>
+      <button @click="plus">+1</button>
+    </div>
+  </div>
+</body>
+
+<script src="./static/mini-vue.umd.js"></script>
+
+<script>
+const { ref, effect, proxyRefs, compileToFunction } = MiniVue
+
+
+createApp({
+  setup() {
+    const count = ref(0)
+    const plus = () => {
+      count.value++
+    }
+    const minus = () => {
+      count.value--
+    }
+    return {
+      count,
+      plus,
+      minus
+    }
+  }
+}).mount('#app')
+
+function createApp(options = {}) {
+  const app = {
+    mount(container) {
+      if (typeof container === 'string') {
+        container = document.querySelector(container)
+      }
+      const template = container.innerHTML
+      const { render } = compileToFunction(template)
+      const setupFn = options.setup || noop
+      const setupResult = setupFn() || {}
+      const data = proxyRefs(setupResult)
+      const reload = () => {
+        const vnode = render(data)
+        container.innerHTML = ''
+        _mount(vnode, container)
+      }
+      effect(() => {
+        reload()
+      })
+    }
+  }
+  return app
+}
+
+function _mount(vnode, container) {
+  const el = document.createElement(vnode.tag)
+
+  if (vnode.props) {
+    for (let key in vnode.props) {
+      if (key.startsWith('on')) { // 事件绑定
+        const eventName = key.slice(2).toLowerCase()
+        el.addEventListener(eventName, vnode.props[key])
+      } else {
+        el.setAttribute(key, vnode.props[key])
+      }
+    }
+  }
+  if (Array.isArray(vnode.children)) {
+    vnode.children.forEach(child => {
+      _mount(child, el)
+    })
+  } else { // string
+    el.textContent = vnode.children
+  }
+
+  container.appendChild(el)
+}
+</script>
+

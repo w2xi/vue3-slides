@@ -2193,10 +2193,17 @@ function compileToFunction(template) {
 [Vue3 Template Explorer](https://template-explorer.vuejs.org/)
 
 ---
+layout: center
+transition: fade-out
+---
 
-## 挂载&更新
+# 挂载&更新
 
-前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，已经有能力将模板编译成渲染函数了，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载和更新** (这里不涉及 patch)。
+---
+
+## 挂载
+
+前面我们实现了 **响应式系统** 和 **编译**(丐中丐版)，已经有能力将模板编译成渲染函数了，现在我们将它们整合起来，同时为了能将代码跑起来，我们还需要稍微简单实现下 **挂载**。
 
 过程如下图所示:
 
@@ -2304,7 +2311,9 @@ mount(vnode, document.body)
 
 ---
 
-前文中，我们已经实现了**挂载**，现在我们将代码封装一下，并实现自动**更新**的功能。
+## 更新
+
+前文中，我们已经实现了**挂载**，现在我们将代码封装一下，并实现**更新**的功能。
 
 <div grid="~ cols-2 gap-2">
 
@@ -2334,9 +2343,7 @@ function createApp(options = {}) {
         container.innerHTML = ''
         _mount(vnode, container)
       }
-      effect(() => {
-        reload()
-      })
+      effect(() => reload())
     }
   }
   return app
@@ -2349,7 +2356,58 @@ function createApp(options = {}) {
 
 现在代码应该可以跑起来了，并且能够响应式更新。
 
-接下来来看一个 **计数器 demo**。
+但是这里的更新目前其实是: 先把 dom 清空，然后再重新挂载的一个过程。
+
+来看一个 demo:
+
+<div grid="~ cols-2 gap-2">
+
+```html
+<body>
+  <div id="app">
+    <div class="demo">
+      <button @click="minus">-1</button>
+      <span class="count">{{ count }}</span>
+      <button @click="plus">+1</button>
+    </div>
+  </div>
+</body>
+
+<script src="./static/mini-vue.umd.js"></script>
+
+<script>
+const { ref, effect, proxyRefs, compileToFunction } = MiniVue
+</script>
+```
+
+```js
+// demo: 23-force-update.html
+
+createApp({
+  setup() {
+    const count = ref(0)
+    const plus = () => {
+      count.value++
+    }
+    const minus = () => {
+      count.value--
+    }
+    return {
+      count,
+      plus,
+      minus
+    }
+  }
+}).mount('#app')
+```
+
+</div>
+
+---
+
+运行 demo，点击 `+1` 按钮，查看 DevTools 的 Elements，发现每次都是全量更新。
+
+接下来我们来简单优化下，实现一个简单的 `patch` 函数，用来对比新旧节点，只更新需要更新的部分。
 
 ---
 
