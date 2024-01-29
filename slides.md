@@ -1220,7 +1220,9 @@ transition: fade-out
 
 ---
 
-首先来看看完整的编译流程:
+## 编译流程
+
+首先来看看完整的模板编译流程:
 
 ![compile](/public/compile-process.excalidraw.png)
 
@@ -1238,13 +1240,49 @@ const render = new Function(code) // 渲染函数
 
 ![template-to-render](/public/template-to-render.excalidraw.png)
 
-编译器的最终目的就是将**模板转换成渲染函数**，而渲染函数的执行会生成虚拟DOM，用于后续的挂载和更新。
+可以看到，模板编译器的最终目的就是将**模板转换(源代码)成渲染函数(目标代码)**。
 
 ---
 
 ## 抽象语法树 AST (Abstract Syntax Tree ) 
 
-前面我们已经知道了，模板会被解析器解析成 AST，在 JS 中，AST 本质就是一个 JS 对象。
+前面我们已经知道了，模板会被解析器解析成 AST，那么什么是 AST 呢？
+
+摘自[维基百科](https://zh.wikipedia.org/zh-cn/%E6%8A%BD%E8%B1%A1%E8%AA%9E%E6%B3%95%E6%A8%B9):
+
+> 在计算机科学中，抽象语法树（Abstract Syntax Tree，AST），是源代码语法结构的一种抽象表示。它以树状的形式表现编程语言的语法结构，树上的每个节点都表示源代码中的一种结构。
+
+由上定义可知:
+
++ AST 是一个树状结构
++ AST 表示源代码的语法结构
+
+关于 AST，可以看看 [AST Explorer](https://astexplorer.net/)
+
+那 AST 有什么用呢？
+
+---
+
+在前端领域，AST 其实应用广泛，比如:
+
++ babel: 典型的转译器，也是根据源代码的 AST 转换成其他代码的 AST，再生成目标代码，如 ES6 转 ES5
++ jsx: 大名鼎鼎的 jsx 语法其实也是需要编译的，并且最终编译完也是很多的 `render` 函数
++ ESlint: ESlint 也需要对源代码的 AST 进行解析处理，分析是否符合规则
++ TypeScript: 天天都在用的 ts 也是需要编译的，由 ts 编译成 js
++ V8: Chrome 的 V8 引擎能直接执行 js，想都不用想，肯定需要编译
++ 语法高亮: 每天都看着五颜六色的代码，也是通过编译实现的
++ 代码提示: 同上
++ 错误检验: 同上
++ ...
+
+更多参考:
+
+- [https://juejin.cn/post/7031908854388490248](https://juejin.cn/post/7031908854388490248)
+- [https://juejin.cn/post/6844904035271573511](https://juejin.cn/post/6844904035271573511)
+
+---
+
+了解了什么是 AST 后，我们再来看看 Vue 模板对应的 AST 长什么样子。
 
 假设有如下模板:
 
@@ -1252,7 +1290,7 @@ const render = new Function(code) // 渲染函数
 const template = `<div class="test"><span>Hello</span></div>`
 ```
 
-经过解析之后，它对应的 AST 结构如下:
+经过解析之后，它对应的 AST 结构如下表示:
 
 ```js
 const ast = {
