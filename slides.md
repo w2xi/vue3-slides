@@ -1351,7 +1351,7 @@ const ast = {
 }
 ```
 
-定义节点类型:
+定义节点类型枚举:
 
 ```js
 const NodeTypes = {
@@ -2415,9 +2415,36 @@ createApp({
 
 ---
 
+`patch` 函数的实现如下:
+
+```js
+/**
+ * @param {*} n1 old vnode
+ * @param {*} n2 new vnode
+ */
+function patch(n1, n2) {
+  if (n1.tag === n2.tag) {
+    // ...
+  } else {
+    // ...
+  }
+}
+```
+
+具体代码和demo见: `24-patch.html`
+
+---
+
+现在，我们已经实现了 **挂载** 和 **更新**，整合之前的代码，接下来再来看下 **计数器** demo 的效果。
+
+---
+
 ## Counter 计数器
 
-demo: `22-counter.html`
+demo: `25-counter.html`
+
+> 打开 DevTools 的 Elements 查看效果
+
 
 <div grid="~ cols-2 gap-2">
 
@@ -2497,9 +2524,9 @@ function createApp(options = {}) {
 <div id="app"></div>
 ```
 
-```html
-<script>
-// demo: 24-render-function-options.html
+```js
+// demo: 26-render-function-options.html
+
 const { createApp, ref, h } = MiniVue
 createApp({
   setup() {
@@ -2521,7 +2548,6 @@ createApp({
     ])
   }
 }).mount('#app')
-</script>
 ```
 
 </div>
