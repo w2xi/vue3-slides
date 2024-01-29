@@ -10,10 +10,12 @@
     - [x] watch 的实现原理
     - [x] 自动脱 ref
 - 编译器
+    - [x] 抽象语法树 AST 介绍
     - [x] 模板解析 parse
     - [x] 转化器 transform
     - [x] 代码生成 codegen
     - [x] 编译 compile
+- 挂载 & 更新
 - Demo
     - [x] 计数器
     
