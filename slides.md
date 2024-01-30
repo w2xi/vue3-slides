@@ -553,7 +553,7 @@ effect(function effectFn1() {
 })
 ```
 
-分析以上代码可知，当发生 effect 嵌套时，**内层副作用函数 effectFn2 的执行会覆盖掉 activeEffect 的值**，并且永远不会恢复到原来的值，这就是问题产生的元因。
+分析以上代码可知，当发生 effect 嵌套时，**内层副作用函数 effectFn2 的执行会覆盖掉 activeEffect 的值**，并且永远不会恢复到原来的值，这就是问题产生的原因。
 
 那么，应该如何解决这个问题吗 ？
 
@@ -604,8 +604,8 @@ console.log('结束了')
 现在假设我们期望输出的顺序如下:
 ```js
 1
-2
 '结束了'
+2
 ```
 
 ---
@@ -1958,7 +1958,7 @@ function createCodegenContext() {
 function genCode(node, context) {
   const { push, indent, deIndent } = context
   const fnName = 'render'
-  const args = ['_ctx', 'config']
+  const args = ['_ctx']
   const signature = args.join(', ')
 
   push(`return `)
@@ -1968,7 +1968,7 @@ function genCode(node, context) {
   push(`{`)
   // 缩进
   indent()
-  push(`const { h, _toDisplayString } = config`)
+  push(`const { h, _toDisplayString } = MiniVue`)
   indent()
   push(`return `)
   genNode(node, context)
@@ -2589,6 +2589,16 @@ createApp({
 ```
 
 </div>
+
+---
+
+## 总结
+
+我们依次实现了 响应式系统和模板编译，然后结合这两者实现了简单的挂载和更新。
+
+有了这些基础，我们就可以做一些有趣的事情了。比如写一个计数器的demo，它能做到响应式更新，而且只更新需要更新的部分。
+
+到这里，可以说我们实现了一个乞丐版 `Vue`，不过它只能处理相对简单的场景，但是对理解 Vue3 内部的原理还是非常有帮助的。
 
 ---
 layout: image

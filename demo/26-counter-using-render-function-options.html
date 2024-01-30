@@ -41,7 +41,7 @@
         const { count, plus, minus } = props
         return h('div', { class: 'demo'}, [
           h('button', { onClick: minus }, '-1'),
-          h('span', { class: 'count' }, count),
+          h('span', { class: 'count' }, String(count)),
           h('button', { onClick: plus }, '+1')
         ])
       }
