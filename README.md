@@ -15,7 +15,8 @@
     - [x] 转化器 transform
     - [x] 代码生成 codegen
     - [x] 编译 compile
-- 挂载 & 更新
+- 挂载
+- 更新 (简单的 patch diff)
 - Demo
     - [x] 计数器
     
