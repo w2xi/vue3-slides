@@ -1,9 +1,9 @@
 {
-  "name": "slide-demo",
+  "name": "vue3-slides",
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "slidev build --base /slides-demo/",
+    "build": "slidev build --base /vue3-slides/",
     "dev": "slidev --open",
     "export": "slidev export"
   },
