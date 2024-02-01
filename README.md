@@ -22,11 +22,23 @@
     - [x] 模板解析 parse
     - [x] 转换器 transform
     - [x] 代码生成 codegen
-    - [x] compileToFunction
+    - [x] 编译 compile
 - 挂载
 - 更新 (简单的 patch diff)
 - Demo
     - [x] 计数器
+
+## 安装 & 运行
+
+```bash
+git clone https://github.com/w2xi/vue3-slides.git
+
+cd vue3-slides
+
+pnpm install
+
+pnpm dev
+```
     
 ## 参考
 
